@@ -1,0 +1,43 @@
+Lmax = 94
+Solve Time = 8.87s
+Schedule:
+  Job 2: start = 34, end = 38
+  Job 1: start = 69, end = 71
+  Job 8: start = 71, end = 74
+  Job 3: start = 74, end = 79
+  Job 4: start = 80, end = 85
+  Job 5: start = 85, end = 88
+  Job 6: start = 88, end = 94
+  Job 10: start = 94, end = 98
+  Job 9: start = 98, end = 101
+  Job 18: start = 101, end = 110
+  Job 7: start = 110, end = 113
+  Job 12: start = 113, end = 119
+  Job 11: start = 119, end = 121
+  Job 13: start = 121, end = 127
+  Job 17: start = 127, end = 135
+  Job 14: start = 135, end = 141
+  Job 23: start = 141, end = 150
+  Job 15: start = 150, end = 156
+  Job 19: start = 156, end = 164
+  Job 16: start = 164, end = 165
+  Job 29: start = 165, end = 172
+  Job 21: start = 172, end = 181
+  Job 24: start = 181, end = 189
+  Job 27: start = 189, end = 192
+  Job 39: start = 192, end = 197
+  Job 38: start = 197, end = 198
+  Job 22: start = 201, end = 207
+  Job 25: start = 212, end = 220
+  Job 20: start = 221, end = 230
+  Job 26: start = 230, end = 238
+  Job 36: start = 238, end = 240
+  Job 31: start = 240, end = 242
+  Job 35: start = 242, end = 243
+  Job 28: start = 243, end = 250
+  Job 40: start = 250, end = 255
+  Job 32: start = 255, end = 262
+  Job 33: start = 262, end = 266
+  Job 37: start = 266, end = 271
+  Job 30: start = 271, end = 278
+  Job 34: start = 278, end = 279

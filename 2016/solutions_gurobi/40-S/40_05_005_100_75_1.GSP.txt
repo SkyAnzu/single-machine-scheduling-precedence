@@ -1,0 +1,44 @@
+Lmax = 133
+MIP Gap = 14.29%
+Solve Time = 300.00s
+Schedule:
+  Job 1: start = 1, end = 6
+  Job 2: start = 8, end = 16
+  Job 4: start = 16, end = 21
+  Job 3: start = 21, end = 28
+  Job 6: start = 28, end = 36
+  Job 7: start = 36, end = 40
+  Job 5: start = 40, end = 45
+  Job 8: start = 45, end = 47
+  Job 12: start = 47, end = 55
+  Job 9: start = 55, end = 64
+  Job 10: start = 64, end = 72
+  Job 17: start = 72, end = 76
+  Job 14: start = 76, end = 84
+  Job 11: start = 84, end = 85
+  Job 19: start = 85, end = 87
+  Job 15: start = 87, end = 93
+  Job 21: start = 93, end = 97
+  Job 13: start = 97, end = 101
+  Job 18: start = 101, end = 106
+  Job 23: start = 106, end = 114
+  Job 16: start = 114, end = 117
+  Job 20: start = 117, end = 121
+  Job 25: start = 121, end = 128
+  Job 24: start = 128, end = 137
+  Job 26: start = 137, end = 141
+  Job 22: start = 141, end = 147
+  Job 28: start = 147, end = 149
+  Job 27: start = 149, end = 152
+  Job 33: start = 152, end = 159
+  Job 29: start = 159, end = 162
+  Job 30: start = 162, end = 169
+  Job 31: start = 169, end = 173
+  Job 32: start = 173, end = 182
+  Job 34: start = 182, end = 189
+  Job 39: start = 189, end = 191
+  Job 40: start = 191, end = 200
+  Job 35: start = 200, end = 204
+  Job 37: start = 204, end = 206
+  Job 38: start = 206, end = 213
+  Job 36: start = 235, end = 244

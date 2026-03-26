@@ -1,0 +1,23 @@
+Lmax = 13
+Solve Time = 0.01s
+Schedule:
+  Job 1: start = 10, end = 16
+  Job 3: start = 16, end = 23
+  Job 2: start = 23, end = 24
+  Job 7: start = 45, end = 46
+  Job 6: start = 46, end = 53
+  Job 4: start = 53, end = 56
+  Job 5: start = 56, end = 61
+  Job 15: start = 61, end = 65
+  Job 9: start = 65, end = 71
+  Job 10: start = 71, end = 77
+  Job 11: start = 77, end = 78
+  Job 17: start = 78, end = 79
+  Job 12: start = 82, end = 86
+  Job 14: start = 86, end = 93
+  Job 8: start = 93, end = 97
+  Job 13: start = 97, end = 103
+  Job 20: start = 103, end = 110
+  Job 16: start = 111, end = 118
+  Job 19: start = 118, end = 120
+  Job 18: start = 128, end = 137

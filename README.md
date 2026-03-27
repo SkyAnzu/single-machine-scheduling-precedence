@@ -6,6 +6,7 @@ Dự án này dùng để so sánh nhiều encoding và solver cho bài toán l�
 
 - `common/`: các tiện ích dùng chung cho parser dataset, cấu hình đường dẫn, và kiểm tra lịch
 - `Encoding/`: các triển khai solver (`seqcounter`, `seqcardenc`, `seqcardenc_ver2`, `basicsat`, `pbenc`, `gurobi`)
+- `Graph_in4/`: các script tạo ảnh đồ thị precedence và xuất thống kê graph ra Excel
 - `Test/`: các script runner để chạy thực nghiệm
 - `Filenames/`: danh sách tên file được dùng làm nguồn xác định các instance cần chạy
 - `2016/Ins/`: thư mục dataset gốc, tổ chức theo dạng `wtrd_pred{n}/{S|L}/`
@@ -20,6 +21,7 @@ Hiện tại project đã được tách thành các lớp rõ ràng hơn:
 - `common/schedule_utils.py`: các hàm dùng chung cho window tightening, tính lateness, và validation
 - `Encoding/*.py`: chỉ giữ phần modeling và solving đặc thù từng solver
 - `Test/*.py`: chịu trách nhiệm điều phối thực nghiệm, resume, và ghi kết quả Excel
+- `Graph_in4/*.py`: tiện ích phân tích cấu trúc precedence graph từ các file `.GSP`
 - `validate_solutions.py`: công cụ CLI để validate lời giải, được xây trên các utility dùng chung
 
 Trong `Test/` hiện có 3 runner chính:
@@ -74,6 +76,15 @@ Chạy một instance lẻ mà không ghi output persistent:
 .venv\Scripts\python Test\run_single_instance.py "2016\Ins\wtrd_pred10\S\10_05_005_100_25_1.GSP" --solver seqcardenc_ver2 --timeout 120
 ```
 
+Sinh ảnh đồ thị precedence và xuất thống kê graph:
+
+```bash
+.venv\Scripts\python Graph_in4\visualize_gsp.py --file "2016\Ins\wtrd_pred10\S\10_05_005_100_25_1.GSP"
+.venv\Scripts\python Graph_in4\visualize_gsp.py --folder "2016\Ins"
+.venv\Scripts\python Graph_in4\export_stats.py
+.venv\Scripts\python Graph_in4\export_stats.py --folder "2016\Ins" --out "Graph_in4\gsp_statistics.xlsx"
+```
+
 ## Hành vi của batch runner
 
 - Script: `Test/run_batch_from_filelist.py`
@@ -100,6 +111,13 @@ Chạy một instance lẻ mà không ghi output persistent:
 - Hỗ trợ toàn bộ solver của batch runner
 - Không ghi file solution hay Excel lâu dài vào workspace
 - In ra màn hình các thông tin tóm tắt như `status`, `Lmax`, `time_s`, và `gap_%` nếu có
+
+## Công cụ phân tích graph
+
+- `Graph_in4/visualize_gsp.py`: đọc file `.GSP` và vẽ DAG precedence theo các layer topo
+- `Graph_in4/export_stats.py`: quét một cây thư mục `.GSP` và xuất workbook Excel thống kê graph
+- `Graph_in4/visualize_gsp.py` ghi ảnh vào `Graph_in4/graph/`, giữ nguyên cấu trúc thư mục tương đối của input khi chạy batch
+- `Graph_in4/export_stats.py` mặc định đọc từ `2016/Ins/` và ghi file `Graph_in4/gsp_statistics.xlsx`
 
 ## Định dạng output
 

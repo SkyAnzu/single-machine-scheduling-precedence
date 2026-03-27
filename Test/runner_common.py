@@ -219,7 +219,7 @@ def parse_solution_file(solution_file: Path, solver: str, default_status: str):
         if first_line == "UNSAT":
             return "-", "UNSAT", None
         if first_line == "TIMEOUT":
-            return "-", "TIMEOUT_NO_SOL" if solver == "gurobi" else default_status, None
+            return "-", "TIMEOUT", None
         if first_line == "INFEASIBLE":
             return "-", "INFEASIBLE", None
         if first_line.startswith("STATUS_"):

@@ -31,6 +31,7 @@ from runner_common import (
 
 
 TIMEOUT = 300
+SUBPROCESS_GRACE = 20
 SPECIAL_SUFFIX = "05_025_125_50_1.GSP"
 
 
@@ -113,16 +114,22 @@ def main(solvers=None, instance_types=None):
                 started_at = time.time()
                 status = "FINISHED"
                 try:
-                    process.wait(timeout=TIMEOUT + 20)
+                    process.wait(timeout=TIMEOUT)
                     elapsed = time.time() - started_at
                 except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait()
-                    elapsed = time.time() - started_at
                     status = "TIMEOUT"
+                    elapsed = float(TIMEOUT)
+                    try:
+                        process.wait(timeout=SUBPROCESS_GRACE)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.wait()
 
                 time.sleep(0.1)
                 lmax, status, gap = parse_solution_file(solution_file, solver, status)
+
+                if status == "TIMEOUT":
+                    elapsed = float(TIMEOUT)
 
                 gap_text = f"gap={gap:.2f}% | " if gap is not None else ""
                 print(f"{status} | Lmax={lmax} | {gap_text}{elapsed:.2f}s")

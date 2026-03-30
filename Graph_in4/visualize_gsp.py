@@ -10,11 +10,11 @@ directory that lives next to this script.
 Usage
 -----
   # Single file
-  python visualize_gsp.py --file "path/to/file.GSP"
+  python Graph_in4/visualize_gsp.py --file "path/to/file.GSP"
 
   # Batch – every .GSP under a folder tree (uses multiprocessing)
-  python visualize_gsp.py --folder "path/to/Ins"
-  python visualize_gsp.py --folder "path/to/Ins" --workers 8
+  python Graph_in4/visualize_gsp.py --folder "path/to/Ins"
+  python Graph_in4/visualize_gsp.py --folder "2016/Ins" --workers 8
 
 Requirements
 ------------

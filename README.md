@@ -2,7 +2,7 @@
 
 Dự án này phục vụ thực nghiệm cho bài toán lập lịch trên một máy với ràng buộc precedence, trọng tâm là so sánh nhiều SAT encoding và một mô hình MIP dùng Gurobi.
 
-README này được viết để những lần mở context sau chỉ cần đọc một file là nắm được cấu trúc workspace, luồng chạy, dữ liệu đầu vào, nơi ghi kết quả, và vai trò của từng script.
+Nếu cần context kỹ thuật sâu hơn để sửa code, đọc thêm `AIREADME.md`. `README.md` đóng vai trò bản mô tả đầy đủ cho workspace, còn `AIREADME.md` là bản implementation context cho các session kỹ thuật.
 
 ## Tổng quan workspace
 

@@ -347,7 +347,8 @@ def draw_graph(G: nx.DiGraph, layer: Dict[int, int], data: GspData, title: str,
 # Output path helper
 # ---------------------------------------------------------------------------
 
-def make_output_path(gsp_path: Path, input_root: Optional[Path] = None) -> Path:
+def make_output_path(gsp_path: Path, input_root: Optional[Path] = None,
+                     output_root: Optional[Path] = None) -> Path:
     """
     Mirror input_root sub-folder structure under OUTPUT_ROOT.
 
@@ -361,14 +362,16 @@ def make_output_path(gsp_path: Path, input_root: Optional[Path] = None) -> Path:
                 input_root = parent
                 break
 
+    target_root = output_root or OUTPUT_ROOT
+
     stem = gsp_path.stem
     if input_root is not None:
         try:
             rel = gsp_path.parent.relative_to(input_root)
         except ValueError:
             rel = Path(gsp_path.parent.name)
-        return OUTPUT_ROOT / rel / f"{stem}.png"
-    return OUTPUT_ROOT / f"{stem}.png"
+        return target_root / rel / f"{stem}.png"
+    return target_root / f"{stem}.png"
 
 
 # ---------------------------------------------------------------------------
@@ -376,18 +379,19 @@ def make_output_path(gsp_path: Path, input_root: Optional[Path] = None) -> Path:
 # ---------------------------------------------------------------------------
 
 def process_file(gsp_path: Path, input_root: Optional[Path] = None,
-                 index: Optional[int] = None, total: Optional[int] = None):
+                 index: Optional[int] = None, total: Optional[int] = None,
+                 output_root: Optional[Path] = None):
     prefix = f"[{index}/{total}] " if index is not None else ""
     try:
         data         = parse_gsp(gsp_path)
         n_jobs: int  = int(data["n"])
         edges: List[Tuple[int,int]] = list(data["edges"])
         G, layer     = compute_layers(n_jobs, edges)
-        out          = make_output_path(gsp_path, input_root)
+        out          = make_output_path(gsp_path, input_root, output_root=output_root)
         n_layers     = max(layer.values()) + 1
         title        = (f"{gsp_path.name}  —  "
-                        f"n={data['n']},  "
-                        f"{len(edges)} edges,  "
+                         f"n={data['n']},  "
+                         f"{len(edges)} edges,  "
                         f"{n_layers} layers")
         draw_graph(G, layer, data, title, out)
         print(f"{prefix}Saved  {out}", flush=True)

@@ -24,7 +24,7 @@ Thư mục gốc hiện tại gồm các phần chính sau:
 
 - `common/project_paths.py`: khai báo `PROJECT_ROOT`, `INS_DIR`, `OUTPUT_DIR`, danh sách solver, và runtime setup
 - `common/dataset.py`: parser dùng chung cho file `.GSP`
-- `common/schedule_utils.py`: `window_tightening`, `compute_max_lateness`, `validate_schedule`
+- `common/schedule_utils.py`: `window_tightening`, `compute_max_lateness`, `compute_job_lateness`, `format_solution_text`, `validate_schedule`
 - `Encoding/functions_seqcounter.py`: bản sequential-counter tự cài đặt tay
 - `Encoding/functions_seqcardenc.py`: bản giống `seqcounter` nhưng phần cardinality dùng `CardEnc`
 - `Encoding/functions_seqcardenc_ver2.py`: bản `seqcardenc` cộng thêm symmetry-breaking cho các node nguồn của DAG
@@ -35,7 +35,9 @@ Thư mục gốc hiện tại gồm các phần chính sau:
 - `Test/run_batch_from_filelist.py`: runner batch theo danh sách file trong `Filenames/`
 - `Test/run_instances_05_025_125_50_1.py`: runner cho bộ benchmark đặc biệt `XX_05_025_125_50_1.GSP`
 - `Test/run_single_instance.py`: chạy một instance lẻ, không ghi output persistent ra workspace
+- `Test/rewrite_existing_solutions.py`: script migrate/rewrite toàn bộ `solution.txt` đã có sang format mới
 - `Graph_in4/visualize_gsp.py`: vẽ DAG precedence của file `.GSP`
+- `Graph_in4/visualize_batch_from_filelist.py`: batch visualizer chỉ xử lý các instance được liệt kê trong `Filenames/`
 - `Graph_in4/export_stats.py`: thống kê graph của cả thư mục `.GSP` ra Excel
 
 ## Dữ liệu và ánh xạ đường dẫn
@@ -49,7 +51,7 @@ Runner hiện tại dùng bộ dữ liệu `2016/Ins/` với ánh xạ như sau:
 - `2016/Ins/wtrd_pred10/L/<filename>` -> instance loại `L`, kích thước `10`
 - tương tự cho `20`, `30`, `40`, `50`
 
-Danh sách filename trong `Filenames/` là nguồn duy nhất để quyết định batch runner sẽ quét những instance nào.
+Danh sách filename trong `Filenames/` là nguồn duy nhất để quyết định batch runner và batch visualizer sẽ quét những instance nào.
 
 ## Bộ dữ liệu nào đang được dùng
 
@@ -169,6 +171,8 @@ Chức năng:
 - đọc file `.GSP`
 - dựng DAG precedence
 - sắp node theo topological layers
+- hiển thị thêm `ready date`, `due date`, `deadline` bên cạnh từng node
+- chỉ vẽ precedence giữa `n` job thật, không tính dummy node `n+1`
 - xuất ảnh `.png`
 
 Đầu ra mặc định:
@@ -176,6 +180,21 @@ Chức năng:
 - `Graph_in4/graph/`
 
 Khi chạy ở chế độ folder, script sẽ giữ nguyên cấu trúc thư mục tương đối của input bên dưới `graph/`.
+
+Khi chạy ở chế độ single-file, script hiện cũng tự suy ra mốc `Ins/` nếu có, nên output vẫn giữ được nhánh `wtrd_predXX/S|L/...` thay vì dồn tất cả ảnh vào cùng một thư mục.
+
+### `Graph_in4/visualize_batch_from_filelist.py`
+
+Chức năng:
+
+- đọc danh sách filename từ `Filenames/{10,20,30,40,50}.txt`
+- resolve instance trong `2016/Ins/wtrd_pred{n}/{S|L}/`
+- chỉ vẽ đúng các instance có trong danh sách
+- ghi ảnh vào `Graph_in4/graph_batch/`
+
+Output hiện tại có dạng:
+
+- `Graph_in4/graph_batch/wtrd_pred10/S/<filename>.png`
 
 ### `Graph_in4/export_stats.py`
 
@@ -237,8 +256,19 @@ Sau khi cài, hai script `Graph_in4/visualize_gsp.py` và `Graph_in4/export_stat
 ```bash
 .venv\Scripts\python Graph_in4\visualize_gsp.py --file "2016\Ins\wtrd_pred10\S\10_05_005_100_25_1.GSP"
 .venv\Scripts\python Graph_in4\visualize_gsp.py --folder "2016\Ins"
+.venv\Scripts\python Graph_in4\visualize_batch_from_filelist.py
+.venv\Scripts\python Graph_in4\visualize_batch_from_filelist.py --types S
+.venv\Scripts\python Graph_in4\visualize_batch_from_filelist.py --sizes 10 20 --types S L --workers 4
 .venv\Scripts\python Graph_in4\export_stats.py
 .venv\Scripts\python Graph_in4\export_stats.py --folder "2016\Ins" --out "Graph_in4\gsp_statistics.xlsx"
+```
+
+### Rewrite lại solution cũ theo format mới
+
+```bash
+.venv\Scripts\python Test\rewrite_existing_solutions.py
+.venv\Scripts\python Test\rewrite_existing_solutions.py --solver gurobi --limit 5
+.venv\Scripts\python Test\rewrite_existing_solutions.py --write
 ```
 
 ### Validate một lời giải
@@ -249,13 +279,20 @@ Sau khi cài, hai script `Graph_in4/visualize_gsp.py` và `Graph_in4/export_stat
 
 ## Định dạng output của solver
 
-Một file lời giải thường bắt đầu bằng một trong các dòng sau:
+Một file lời giải hiện thường bắt đầu bằng một trong các dòng sau:
 
-- `Lmax = <value>`
+- `Lmax = <value> (Job <id>)`
+- `Lmax = <value> (Jobs <id1>, <id2>, ...)`
 - `UNSAT`
 - `TIMEOUT`
 - `INFEASIBLE`
 - `STATUS_<code>`
+
+Với file có lịch hợp lệ, từng dòng job hiện có dạng:
+
+- `Job i: start = s, end = e, due_date = d, lateness = e - d`
+
+Format này được dùng thống nhất cho runner mới và cũng có thể được áp dụng lại cho lời giải cũ bằng `Test/rewrite_existing_solutions.py`.
 
 Các cột thường gặp trong Excel kết quả:
 
@@ -288,6 +325,9 @@ Lưu ý: các status cũ như `TIMEOUT_NO_SOL` hiện không còn là trạng th
 - `gurobi.lic`
 - `*.pdf`
 - `__pycache__/`, `*.pyc`
+- `nul`
+
+Nếu thấy xuất hiện file `nul` ở root workspace, đó thường là artefact do dùng redirect kiểu `cmd` trong PowerShell, ví dụ `> nul`. Trong PowerShell nên dùng `> $null` hoặc `| Out-Null`.
 
 ## Điều cần nhớ khi quay lại project
 

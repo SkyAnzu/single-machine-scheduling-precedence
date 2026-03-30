@@ -1,4 +1,5 @@
 import sys
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -17,6 +18,7 @@ from common.project_paths import (
     OUTPUT_DIR,
     configure_runtime_environment,
 )
+from common.schedule_utils import format_solution_text
 
 configure_runtime_environment()
 
@@ -109,14 +111,10 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
             solution_file.write_text(f"{status_msg}\n", encoding="utf-8")
             return "-", status_msg, None
 
-        with open(solution_file, "w", encoding="utf-8") as handle:
-            handle.write(f"Lmax = {lmax}\n")
-            if gap is not None and gap > 0:
-                handle.write(f"MIP Gap = {gap:.2f}%\n")
-            handle.write(f"Solve Time = {solve_time:.2f}s\n")
-            handle.write("Schedule:\n")
-            for job, start in sorted(schedule.items(), key=lambda item: item[1]):
-                handle.write(f"  Job {job}: start = {start}, end = {start + durations[job]}\n")
+        solution_file.write_text(
+            format_solution_text(schedule, durations, due_dates, lmax, solve_time=solve_time, gap=gap),
+            encoding="utf-8",
+        )
 
         return lmax, "FINISHED", gap
 
@@ -157,12 +155,10 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
         return "-", "UNSAT", None
 
     upper_bound = compute_UB_Lmax(schedule, durations, due_dates)
-    with open(solution_file, "w", encoding="utf-8") as handle:
-        handle.write(f"Lmax = {upper_bound}\n")
-        handle.write("Schedule:\n")
-        for job, start in sorted(schedule.items(), key=lambda item: item[1]):
-            handle.write(f"  Job {job}: start = {start}, end = {start + durations[job]}\n")
-        handle.flush()
+    solution_file.write_text(
+        format_solution_text(schedule, durations, due_dates, upper_bound),
+        encoding="utf-8",
+    )
 
     if solver == "basicsat":
         incremental_SAT_Lmax(
@@ -190,7 +186,8 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
 
     try:
         first_line = solution_file.read_text(encoding="utf-8").splitlines()[0]
-        lmax = int(first_line.split("=", 1)[1].strip())
+        match = re.search(r"Lmax\s*=\s*(-?\d+)", first_line)
+        lmax = int(match.group(1)) if match else upper_bound
     except Exception:
         lmax = upper_bound
 
@@ -208,7 +205,10 @@ def parse_solution_file(solution_file: Path, solver: str, default_status: str):
 
         first_line = lines[0].strip()
         if first_line.startswith("Lmax"):
-            lmax = int(first_line.split("=", 1)[1].strip())
+            match = re.search(r"Lmax\s*=\s*(-?\d+)", first_line)
+            if not match:
+                return "-", "ERROR" if default_status == "FINISHED" else default_status, None
+            lmax = int(match.group(1))
             gap = None
             if solver == "gurobi" and len(lines) > 1:
                 second_line = lines[1].strip()

@@ -25,7 +25,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from common.dataset import read_dataset
-from common.schedule_utils import compute_max_lateness, window_tightening
+from common.schedule_utils import compute_max_lateness, format_solution_text, window_tightening
 
 
 class TimeoutError(Exception):
@@ -252,11 +252,7 @@ def incremental_SAT_Lmax(durations, due_dates, S_dict, placeholder, cnf, UB, sol
             # Write intermediate solution
             with open(sol_file, "w", encoding="utf-8") as f:
                 elapsed = time.time() - start_time
-                f.write(f"Lmax = {UB}\n")
-                f.write(f"Solve Time = {elapsed:.2f}s\n")
-                f.write("Schedule:\n")
-                for i, start in sorted(best_schedule.items(), key=lambda x: x[1]):
-                    f.write(f"  Job {i}: start = {start}, end = {start + durations[i]}\n")
+                f.write(format_solution_text(best_schedule, durations, due_dates, UB, solve_time=elapsed))
                 f.flush()
         else:
             if verbose:
@@ -269,11 +265,7 @@ def incremental_SAT_Lmax(durations, due_dates, S_dict, placeholder, cnf, UB, sol
     if best_schedule:
         elapsed = time.time() - start_time
         with open(sol_file, "w", encoding="utf-8") as f:
-            f.write(f"Lmax = {best_Lmax}\n")
-            f.write(f"Solve Time = {elapsed:.2f}s\n")
-            f.write("Schedule:\n")
-            for i, start in sorted(best_schedule.items(), key=lambda x: x[1]):
-                f.write(f"  Job {i}: start = {start}, end = {start + durations[i]}\n")
+            f.write(format_solution_text(best_schedule, durations, due_dates, best_Lmax, solve_time=elapsed))
             f.flush()
     
     if verbose:

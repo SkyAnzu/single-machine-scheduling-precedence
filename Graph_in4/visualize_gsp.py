@@ -124,7 +124,7 @@ def parse_gsp(filepath: Path) -> GspData:
         if not tokens:
             continue
         count      = int(tokens[0])
-        successors = [int(t) for t in tokens[1: 1 + count]]
+        successors = [int(t) for t in tokens[1: 1 + count] if int(t) <= n]
         job_id     = i + 1
         for succ in successors:
             edges.append((job_id, succ))
@@ -148,15 +148,9 @@ def compute_layers(n: int, edges):
     """
     Returns (G, layer_dict) where layer_dict maps node -> int layer index.
     Layer 0 = roots (no predecessors).
-    Includes any virtual sink nodes referenced in edges beyond index n.
     """
-    all_nodes = set(range(1, n + 1))
-    for u, v in edges:
-        all_nodes.add(u)
-        all_nodes.add(v)
-
     G = nx.DiGraph()
-    G.add_nodes_from(sorted(all_nodes))
+    G.add_nodes_from(range(1, n + 1))
     G.add_edges_from(edges)
 
     layer = {}
@@ -175,6 +169,12 @@ def draw_graph(G: nx.DiGraph, layer: Dict[int, int], data: GspData, title: str,
                output_path: Path):
     """Draw the layered graph with a statistics panel and save as PNG."""
 
+    horizontal_spacing = 1.7
+
+    def job_value(values: List[int], node: int) -> Any:
+        index = node - 1
+        return values[index] if 0 <= index < len(values) else "N/A"
+
     n_layers    = max(layer.values()) + 1
     layer_nodes = defaultdict(list)
     for node, lyr in layer.items():
@@ -186,11 +186,11 @@ def draw_graph(G: nx.DiGraph, layer: Dict[int, int], data: GspData, title: str,
         nodes_sorted = sorted(nodes)
         total = len(nodes_sorted)
         for rank, node in enumerate(nodes_sorted):
-            pos[node] = (rank - (total - 1) / 2.0, -lyr)
+            pos[node] = ((rank - (total - 1) / 2.0) * horizontal_spacing, -lyr)
 
     # ---- figure sizing ----
     max_width = max(len(v) for v in layer_nodes.values())
-    fig_w = max(18, max_width * 1.5 + 6)
+    fig_w = max(24, max_width * 2.8 + 8)
     fig_h = max(10, n_layers  * 1.7)
 
     fig = plt.figure(figsize=(fig_w, fig_h))
@@ -257,6 +257,35 @@ def draw_graph(G: nx.DiGraph, layer: Dict[int, int], data: GspData, title: str,
         font_color="white", font_weight="bold",
     )
 
+    for node in G.nodes():
+        x, y = pos[node]
+        annotation = (
+            f"ready={job_value(data['ready_dates'], node)}\n"
+            f"due={job_value(data['due_dates'], node)}\n"
+            f"deadline={job_value(data['deadlines'], node)}"
+        )
+        ax_graph.annotate(
+            annotation,
+            (x, y),
+            textcoords="offset points",
+            xytext=(24, 0),
+            ha="left",
+            va="center",
+            fontsize=6.4,
+            annotation_clip=False,
+            bbox=dict(
+                boxstyle="round,pad=0.25",
+                facecolor="#fffbe6",
+                edgecolor="#c7b96d",
+                linewidth=0.8,
+                alpha=0.95,
+            ),
+        )
+
+    x_max = max(x_vals) + 3.8
+    ax_graph.set_xlim(x_min - 0.6, x_max)
+    ax_graph.set_ylim(-n_layers + 0.3, 1.0)
+
     ax_graph.legend(
         handles=[
             mpatches.Patch(color="#2ecc71", label="Root (no predecessors)"),
@@ -270,23 +299,18 @@ def draw_graph(G: nx.DiGraph, layer: Dict[int, int], data: GspData, title: str,
     ax_stats.axis("off")
 
     n           = data["n"]
-    n_all_nodes = G.number_of_nodes()
-    n_edges     = len(data["edges"])
+    n_edges     = G.number_of_edges()
 
     def fmt(values):
         if not values:
             return "  min = N/A\n  max = N/A"
         return f"  min = {min(values)}\n  max = {max(values)}"
 
-    extra = ""
-    if n_all_nodes != n:
-        extra = f"\n  Total nodes (w/ sink): {n_all_nodes}"
-
     stats_str = (
         "━" * 26 + "\n"
         " INSTANCE STATISTICS\n"
         + "━" * 26 + "\n"
-        f"\n  Declared jobs (n):  {n}{extra}"
+        f"\n  Declared jobs (n):  {n}"
         f"\n  Precedence edges:   {n_edges}"
         f"\n  DAG layers:         {n_layers}"
         "\n\n" + "─" * 26 + "\n"
@@ -331,6 +355,12 @@ def make_output_path(gsp_path: Path, input_root: Optional[Path] = None) -> Path:
     gsp_path   = .../Ins/wtrd_pred30/L/30_00_005_100_75_4.GSP
     output     = <script>/graph/wtrd_pred30/L/30_00_005_100_75_4.png
     """
+    if input_root is None:
+        for parent in gsp_path.parents:
+            if parent.name.lower() == "ins":
+                input_root = parent
+                break
+
     stem = gsp_path.stem
     if input_root is not None:
         try:

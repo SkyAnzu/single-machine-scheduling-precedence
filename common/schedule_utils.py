@@ -54,6 +54,43 @@ def compute_max_lateness(schedule, durations, due_dates, clamp_zero=False):
     return max(lateness_values)
 
 
+def compute_job_lateness(schedule, durations, due_dates):
+    lateness_by_job = {}
+    for job, start_time in schedule.items():
+        completion_time = start_time + durations[job]
+        lateness_by_job[job] = completion_time - due_dates[job]
+    return lateness_by_job
+
+
+def format_solution_text(schedule, durations, due_dates, lmax, solve_time=None, gap=None):
+    lateness_by_job = compute_job_lateness(schedule, durations, due_dates)
+    matching_jobs = [job for job, lateness in lateness_by_job.items() if lateness == lmax]
+    if not matching_jobs and lateness_by_job:
+        max_lateness = max(lateness_by_job.values())
+        matching_jobs = [job for job, lateness in lateness_by_job.items() if lateness == max_lateness]
+
+    lmax_suffix = ""
+    if matching_jobs:
+        label = "Job" if len(matching_jobs) == 1 else "Jobs"
+        job_list = ", ".join(str(job) for job in sorted(matching_jobs))
+        lmax_suffix = f" ({label} {job_list})"
+    lines = [f"Lmax = {lmax}{lmax_suffix}"]
+
+    if gap is not None and gap > 0:
+        lines.append(f"MIP Gap = {gap:.2f}%")
+    if solve_time is not None:
+        lines.append(f"Solve Time = {solve_time:.2f}s")
+
+    lines.append("Schedule:")
+    for job, start in sorted(schedule.items(), key=lambda item: item[1]):
+        end = start + durations[job]
+        lines.append(
+            f"  Job {job}: start = {start}, end = {end}, due_date = {due_dates[job]}, lateness = {lateness_by_job[job]}"
+        )
+
+    return "\n".join(lines) + "\n"
+
+
 def validate_schedule(schedule, job_count, durations, ready_dates, deadlines, successors):
     violations = []
 

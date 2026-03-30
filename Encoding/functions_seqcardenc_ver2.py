@@ -11,7 +11,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from common.dataset import read_dataset
-from common.schedule_utils import compute_max_lateness, validate_schedule as shared_validate_schedule, window_tightening
+from common.schedule_utils import compute_max_lateness, format_solution_text, validate_schedule as shared_validate_schedule, window_tightening
 
 
 def layer_one_jobs(n, successors):
@@ -227,10 +227,7 @@ def incremental_SAT_Lmax(durations, due_dates, S, L, cnf, UB, sol_file, valid_st
 
             UB = Lmax
             with open(sol_file, "w", encoding="utf-8") as handle:
-                handle.write(f"Lmax = {str(UB)} \n")
-                handle.write("Schedule: \n")
-                for i, start in sorted(best_schedule.items(), key=lambda x: x[1]):
-                    handle.write(f"Job {i}: start = {start}, end = {start + durations[i]} \n")
+                handle.write(format_solution_text(best_schedule, durations, due_dates, UB))
                 handle.flush()
         else:
             if verbose:

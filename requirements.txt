@@ -6,3 +6,5 @@ six==1.17.0
 tzdata==2025.3
 gurobipy==13.0.1
 openpyxl==3.1.5
+networkx==3.5
+matplotlib==3.10.7

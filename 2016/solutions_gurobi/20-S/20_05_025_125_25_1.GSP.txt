@@ -1,23 +1,23 @@
-Lmax = 41
+Lmax = 41 (Job 13)
 Solve Time = 0.80s
 Schedule:
-  Job 1: start = 1, end = 9
-  Job 10: start = 9, end = 15
-  Job 3: start = 15, end = 17
-  Job 2: start = 17, end = 19
-  Job 4: start = 19, end = 23
-  Job 6: start = 23, end = 29
-  Job 9: start = 29, end = 35
-  Job 8: start = 35, end = 38
-  Job 18: start = 38, end = 46
-  Job 5: start = 46, end = 47
-  Job 12: start = 47, end = 53
-  Job 11: start = 53, end = 57
-  Job 14: start = 57, end = 62
-  Job 16: start = 62, end = 66
-  Job 7: start = 66, end = 72
-  Job 17: start = 72, end = 80
-  Job 15: start = 80, end = 89
-  Job 19: start = 89, end = 97
-  Job 20: start = 97, end = 101
-  Job 13: start = 101, end = 105
+  Job 1: start = 1, end = 9, due_date = 23, lateness = -14
+  Job 10: start = 9, end = 15, due_date = 34, lateness = -19
+  Job 3: start = 15, end = 17, due_date = 16, lateness = 1
+  Job 2: start = 17, end = 19, due_date = 17, lateness = 2
+  Job 4: start = 19, end = 23, due_date = 21, lateness = 2
+  Job 6: start = 23, end = 29, due_date = 32, lateness = -3
+  Job 9: start = 29, end = 35, due_date = 22, lateness = 13
+  Job 8: start = 35, end = 38, due_date = 33, lateness = 5
+  Job 18: start = 38, end = 46, due_date = 48, lateness = -2
+  Job 5: start = 46, end = 47, due_date = 43, lateness = 4
+  Job 12: start = 47, end = 53, due_date = 51, lateness = 2
+  Job 11: start = 53, end = 57, due_date = 70, lateness = -13
+  Job 14: start = 57, end = 62, due_date = 22, lateness = 40
+  Job 16: start = 62, end = 66, due_date = 27, lateness = 39
+  Job 7: start = 66, end = 72, due_date = 36, lateness = 36
+  Job 17: start = 72, end = 80, due_date = 55, lateness = 25
+  Job 15: start = 80, end = 89, due_date = 69, lateness = 20
+  Job 19: start = 89, end = 97, due_date = 58, lateness = 39
+  Job 20: start = 97, end = 101, due_date = 63, lateness = 38
+  Job 13: start = 101, end = 105, due_date = 64, lateness = 41

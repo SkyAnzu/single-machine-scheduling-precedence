@@ -1,13 +1,13 @@
-Lmax = 3
+Lmax = 3 (Job 5)
 Solve Time = 0.00s
 Schedule:
-  Job 1: start = 3, end = 9
-  Job 2: start = 9, end = 11
-  Job 4: start = 11, end = 17
-  Job 5: start = 17, end = 24
-  Job 3: start = 24, end = 25
-  Job 6: start = 25, end = 32
-  Job 7: start = 32, end = 34
-  Job 10: start = 34, end = 36
-  Job 9: start = 36, end = 38
-  Job 8: start = 38, end = 46
+  Job 1: start = 3, end = 9, due_date = 16, lateness = -7
+  Job 2: start = 9, end = 11, due_date = 15, lateness = -4
+  Job 4: start = 11, end = 17, due_date = 18, lateness = -1
+  Job 5: start = 17, end = 24, due_date = 21, lateness = 3
+  Job 3: start = 24, end = 25, due_date = 24, lateness = 1
+  Job 6: start = 25, end = 32, due_date = 30, lateness = 2
+  Job 7: start = 32, end = 34, due_date = 51, lateness = -17
+  Job 10: start = 34, end = 36, due_date = 51, lateness = -15
+  Job 9: start = 36, end = 38, due_date = 36, lateness = 2
+  Job 8: start = 38, end = 46, due_date = 55, lateness = -9

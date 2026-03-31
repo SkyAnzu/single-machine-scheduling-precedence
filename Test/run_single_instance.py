@@ -1,4 +1,6 @@
 import argparse
+import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -6,7 +8,15 @@ from pathlib import Path
 from runner_common import AVAILABLE_SOLVERS, parse_solution_file, run_single_instance
 
 
+SUBPROCESS_GRACE = 20
+
+
 def main():
+    if len(sys.argv) == 6 and sys.argv[1] == "--single":
+        _, _, dataset_file, solution_file, solver, timeout = sys.argv
+        run_single_instance(Path(dataset_file), Path(solution_file), solver, int(timeout))
+        return
+
     parser = argparse.ArgumentParser(
         description="Run one instance without writing persistent solution or Excel outputs."
     )
@@ -32,12 +42,40 @@ def main():
 
     with tempfile.TemporaryDirectory(prefix="smsp_run_") as temp_dir:
         temp_solution = Path(temp_dir) / f"{instance_path.name}.txt"
+        script_path = Path(__file__).resolve()
 
         started_at = time.time()
-        run_single_instance(instance_path, temp_solution, args.solver, args.timeout)
-        elapsed = time.time() - started_at
+        status = "FINISHED"
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                str(script_path),
+                "--single",
+                str(instance_path),
+                str(temp_solution),
+                args.solver,
+                str(args.timeout),
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        try:
+            process.wait(timeout=args.timeout)
+            elapsed = time.time() - started_at
+        except subprocess.TimeoutExpired:
+            status = "TIMEOUT"
+            elapsed = float(args.timeout)
+            try:
+                process.wait(timeout=SUBPROCESS_GRACE)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
 
-        lmax, status, gap = parse_solution_file(temp_solution, args.solver, "FINISHED")
+        time.sleep(0.1)
+        lmax, status, gap = parse_solution_file(temp_solution, args.solver, status)
+
+        if status == "TIMEOUT":
+            elapsed = float(args.timeout)
 
     print("=" * 70)
     print("Single Instance Run")

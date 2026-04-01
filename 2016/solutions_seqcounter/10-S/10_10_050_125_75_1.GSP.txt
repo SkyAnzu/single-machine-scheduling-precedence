@@ -1,4 +1,4 @@
-Lmax = -5 (Jobs 4, 7, 10)
+Lmax = 0 (Jobs 4, 7, 10)
 Schedule:
   Job 1: start = 1, end = 9, due_date = 26, lateness = -17
   Job 2: start = 17, end = 20, due_date = 26, lateness = -6

@@ -91,20 +91,26 @@ def solve_SAT(n, durations, ready_dates, due_dates, deadlines, successors, verbo
     
     if verbose:
         print(f"Created {len(S)} S variables, {len(A)} A variables")
-    
+
     # ============================================================
     # 2) S -> A: If job starts at t, it's active in [t, t+duration)
     # ============================================================
+    s_to_a_clauses = 0
     for i in jobs:
         for t0 in valid_starts[i]:
             s_lit = S[(i,t0)]
             for t in range(t0, t0 + durations[i]):
                 if (i,t) in A:
                     cnf.append([-s_lit, A[(i,t)]])
-    
+                    s_to_a_clauses += 1
+
+    if verbose:
+        print(f"S->A clauses: {s_to_a_clauses}")
+
     # ============================================================
     # 3) Single Machine: At most 1 job active at each time (CardEnc)
     # ============================================================
+    capacity_clauses = 0
     for t in range(T_max):
         active_vars = [A[(i,t)] for i in jobs if (i,t) in A]
         if len(active_vars) > 1:
@@ -112,11 +118,16 @@ def solve_SAT(n, durations, ready_dates, due_dates, deadlines, successors, verbo
                                 encoding=EncType.seqcounter,
                                 top_id=var_counter-1)
             cnf.extend(enc.clauses)
+            capacity_clauses += len(enc.clauses)
             var_counter = enc.nv + 1
-    
+
+    if verbose:
+        print(f"Capacity clauses: {capacity_clauses}")
+
     # ============================================================
     # 4) Each Job Once: Each job starts exactly once (CardEnc)
     # ============================================================
+    exactly_one_clauses = 0
     for i in jobs:
         start_vars = [S[(i,t)] for t in valid_starts[i]]
         if start_vars:
@@ -124,11 +135,16 @@ def solve_SAT(n, durations, ready_dates, due_dates, deadlines, successors, verbo
                                 encoding=EncType.seqcounter,
                                 top_id=var_counter-1)
             cnf.extend(enc.clauses)
+            exactly_one_clauses += len(enc.clauses)
             var_counter = enc.nv + 1
-    
+
+    if verbose:
+        print(f"Exactly-one-start clauses: {exactly_one_clauses}")
+
     # ============================================================
     # 5) Precedence: Job i must finish before job j starts
     # ============================================================
+    precedence_clauses = 0
     for i in jobs:
         for j in successors[i]:
             if j > n:
@@ -138,9 +154,12 @@ def solve_SAT(n, durations, ready_dates, due_dates, deadlines, successors, verbo
                     if t_i + durations[i] > t_j:
                         # Cannot have both S[i,t_i] and S[j,t_j]
                         cnf.append([-S[(i,t_i)], -S[(j,t_j)]])
-    
+                        precedence_clauses += 1
+
     if verbose:
+        print(f"Precedence clauses: {precedence_clauses}")
         print(f"Total clauses: {len(cnf.clauses)}")
+        print(f"Total variables: {var_counter - 1}")
     
     # ============================================================
     # 6) Solve to find feasible solution

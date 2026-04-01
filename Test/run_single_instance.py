@@ -14,7 +14,7 @@ SUBPROCESS_GRACE = 20
 def main():
     if len(sys.argv) == 6 and sys.argv[1] == "--single":
         _, _, dataset_file, solution_file, solver, timeout = sys.argv
-        run_single_instance(Path(dataset_file), Path(solution_file), solver, int(timeout))
+        run_single_instance(Path(dataset_file), Path(solution_file), solver, int(timeout), verbose=True)
         return
 
     parser = argparse.ArgumentParser(
@@ -56,8 +56,6 @@ def main():
                 args.solver,
                 str(args.timeout),
             ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
         )
         try:
             process.wait(timeout=args.timeout)

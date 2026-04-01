@@ -87,7 +87,7 @@ def save_single_sheet_results(excel_file: Path, rows, sheet_name="instances"):
         pd.DataFrame(rows).to_excel(writer, sheet_name=sheet_name, index=False)
 
 
-def run_single_instance(instance_file: Path, solution_file: Path, solver: str, timeout: int):
+def run_single_instance(instance_file: Path, solution_file: Path, solver: str, timeout: int, verbose: bool = False):
     solution_file.parent.mkdir(parents=True, exist_ok=True)
 
     if solver == "gurobi":
@@ -105,6 +105,9 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
             successors,
             time_limit=timeout,
         )
+
+        if verbose:
+            print("MIP solver selected: no CNF clause statistics available.")
 
         if not is_sat:
             status_msg = lmax if isinstance(lmax, str) else "UNSAT"
@@ -140,6 +143,7 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
             due_dates,
             new_deadlines,
             successors,
+            verbose=verbose,
         )
     else:
         cnf, schedule, valid_starts, s_vars, l_vars, is_sat = solve_SAT(
@@ -148,6 +152,7 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
             new_ready_dates,
             new_deadlines,
             successors,
+            verbose=verbose,
         )
 
     if not is_sat:

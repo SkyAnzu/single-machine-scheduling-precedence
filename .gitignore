@@ -8,3 +8,5 @@ gurobi.lic
 *.pdf
 *.png
 nul
+rewrite_existing_solutions.py
+AIREADME.md

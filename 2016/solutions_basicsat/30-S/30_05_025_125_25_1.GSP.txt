@@ -1,5 +1,5 @@
 Lmax = 92 (Jobs 22, 23, 24)
-Solve Time = 53.17s
+Solve Time = 58.17s
 Schedule:
   Job 11: start = 1, end = 10, due_date = 29, lateness = -19
   Job 1: start = 10, end = 16, due_date = 12, lateness = 4

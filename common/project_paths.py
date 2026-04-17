@@ -15,7 +15,7 @@ LICENSE_FILE = PROJECT_ROOT / "gurobi.lic"
 
 DATASET_SIZES = [10, 20, 30, 40, 50]
 INSTANCE_TYPES = ["S", "L"]
-AVAILABLE_SOLVERS = ["seqcounter", "seqcardenc", "seqcardenc_ver2", "basicsat", "pbenc", "gurobi"]
+AVAILABLE_SOLVERS = ["seqcounter", "seqcardenc", "seqcardenc_ver2", "seqcardenc_ver3", "basicsat", "pbenc", "gurobi"]
 DEFAULT_SOLVERS = ["seqcounter", "gurobi"]
 
 

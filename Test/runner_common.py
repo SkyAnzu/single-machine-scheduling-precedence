@@ -129,6 +129,8 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
         from functions_seqcardenc import compute_UB_Lmax, incremental_SAT_Lmax, read_dataset, solve_SAT, window_tightening
     elif solver == "seqcardenc_ver2":
         from functions_seqcardenc_ver2 import compute_UB_Lmax, incremental_SAT_Lmax, read_dataset, solve_SAT, window_tightening
+    elif solver == "seqcardenc_ver3":
+        from functions_seqcardenc_ver3 import compute_UB_Lmax, incremental_SAT_Lmax, read_dataset, solve_SAT, window_tightening
     else:
         from functions_seqcounter import compute_UB_Lmax, incremental_SAT_Lmax, read_dataset, solve_SAT, window_tightening
 

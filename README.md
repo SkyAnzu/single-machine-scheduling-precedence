@@ -28,6 +28,7 @@ Thư mục gốc hiện tại gồm các phần chính sau:
 - `Encoding/functions_seqcounter.py`: bản sequential-counter tự cài đặt tay
 - `Encoding/functions_seqcardenc.py`: bản giống `seqcounter` nhưng phần cardinality dùng `CardEnc`
 - `Encoding/functions_seqcardenc_ver2.py`: bản `seqcardenc` cộng thêm symmetry-breaking cho các node nguồn của DAG
+- `Encoding/functions_seqcardenc_ver3.py`: bản `seqcardenc_ver2` nhưng thay encode `S->A` bằng ràng buộc tương đương theo biến staircase `L`
 - `Encoding/functions_basicsat.py`: SAT encoding dùng cardinality encoding của PySAT
 - `Encoding/functions_pbenc.py`: pseudo-Boolean encoding dùng `pysat.pb`
 - `Encoding/functions_gurobi.py`: mô hình MIP với Gurobi
@@ -64,6 +65,7 @@ Danh sách filename trong `Filenames/` là nguồn duy nhất để quyết đ�
 - `seqcounter`: SAT encoding với sequential counter tự viết tay
 - `seqcardenc`: cùng logic với `seqcounter`, nhưng cardinality constraint dùng `CardEnc`
 - `seqcardenc_ver2`: thêm symmetry-breaking trên tập node nguồn của đồ thị precedence
+- `seqcardenc_ver3`: giữ logic/log/output như `seqcardenc_ver2`, chỉ thay encode `S->A` bằng quan hệ tương đương giữa `A` và `L`
 - `basicsat`: SAT encoding dùng cardinality encoding của PySAT
 - `pbenc`: pseudo-Boolean encoding dùng `pysat.pb`
 - `gurobi`: mô hình MIP dùng Gurobi
@@ -78,7 +80,7 @@ Các runner hiện tại đều xử lý preprocess trước khi vào solver:
 - gọi `window_tightening(...)`
 - truyền `new_ready_dates` và `new_deadlines` vào solver
 
-Điều này có nghĩa là các file encoding như `seqcounter`, `seqcardenc`, `seqcardenc_ver2`, `pbenc` không tự gọi `window_tightening` bên trong `solve_SAT(...)`; preprocessing được thực hiện ở `Test/runner_common.py`.
+Điều này có nghĩa là các file encoding như `seqcounter`, `seqcardenc`, `seqcardenc_ver2`, `seqcardenc_ver3`, `pbenc` không tự gọi `window_tightening` bên trong `solve_SAT(...)`; preprocessing được thực hiện ở `Test/runner_common.py`.
 
 ## Validation hiện nằm ở đâu
 
@@ -116,6 +118,7 @@ Các solver hỗ trợ:
 - `seqcounter`
 - `seqcardenc`
 - `seqcardenc_ver2`
+- `seqcardenc_ver3`
 - `basicsat`
 - `pbenc`
 - `gurobi`
@@ -234,14 +237,14 @@ Sau khi cài, hai script `Graph_in4/visualize_gsp.py` và `Graph_in4/export_stat
 .venv\Scripts\python Test\run_batch_from_filelist.py
 .venv\Scripts\python Test\run_batch_from_filelist.py --types S
 .venv\Scripts\python Test\run_batch_from_filelist.py --types L
-.venv\Scripts\python Test\run_batch_from_filelist.py --types S L --solvers seqcounter seqcardenc seqcardenc_ver2 basicsat pbenc gurobi
+.venv\Scripts\python Test\run_batch_from_filelist.py --types S L --solvers seqcounter seqcardenc seqcardenc_ver2 seqcardenc_ver3 basicsat pbenc gurobi
 ```
 
 ### Runner cho bộ benchmark đặc biệt
 
 ```bash
 .venv\Scripts\python Test\run_instances_05_025_125_50_1.py
-.venv\Scripts\python Test\run_instances_05_025_125_50_1.py --types S L --solvers seqcardenc_ver2 gurobi
+.venv\Scripts\python Test\run_instances_05_025_125_50_1.py --types S L --solvers seqcardenc_ver2 seqcardenc_ver3 gurobi
 ```
 
 ### Chạy một instance lẻ
@@ -249,6 +252,7 @@ Sau khi cài, hai script `Graph_in4/visualize_gsp.py` và `Graph_in4/export_stat
 ```bash
 .venv\Scripts\python Test\run_single_instance.py "2016\Ins\wtrd_pred10\S\10_05_005_100_25_1.GSP" --solver basicsat --timeout 120
 .venv\Scripts\python Test\run_single_instance.py "2016\Ins\wtrd_pred10\S\10_05_005_100_25_1.GSP" --solver seqcardenc_ver2 --timeout 120
+.venv\Scripts\python Test\run_single_instance.py "2016\Ins\wtrd_pred10\S\10_05_005_100_25_1.GSP" --solver seqcardenc_ver3 --timeout 120
 ```
 
 ### Vẽ graph và xuất thống kê graph
@@ -335,6 +339,7 @@ Nếu thấy xuất hiện file `nul` ở root workspace, đó thường là art
 - mọi runner chính đều đi qua `Test/runner_common.py`
 - preprocessing `window_tightening` được gọi ở runner, không phải bên trong từng solver SAT
 - `seqcardenc_ver2` hiện đã được tích hợp vào toàn bộ runner như các solver khác
+- `seqcardenc_ver3` giữ cùng cách chạy/log với `seqcardenc_ver2`, chỉ khác encode `S->A`
 - hard timeout thực nghiệm là `300s`
 - `Graph_in4/` là nhánh tiện ích riêng để quan sát và thống kê đồ thị precedence
 - `README.md` này được xem như bản mô tả chuẩn của workspace hiện tại

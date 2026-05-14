@@ -234,6 +234,23 @@ def incremental_SAT_Lmax(durations, due_dates, S, L, cnf, UB, sol_file, valid_st
                 print("UNSAT")
             break
 
+    stats = solver.accum_stats()
     solver.delete()
+
+    with open(sol_file, "a", encoding="utf-8") as handle:
+        handle.write(
+            f"STATS "
+            f"conflicts={stats.get('conflicts', 0)} "
+            f"decisions={stats.get('decisions', 0)} "
+            f"propagations={stats.get('propagations', 0)} "
+        f"restarts={stats.get('restarts', 0)}\n"
+    )
     print("Incremental SAT finished.")
     print("Best Lmax UB found:", UB)
+    print(
+        f"SAT stats — iterations: {iteration_count}, "
+        f"conflicts: {stats.get('conflicts', 0)}, "
+        f"decisions: {stats.get('decisions', 0)}, "
+        f"propagations: {stats.get('propagations', 0)}, "
+        f"restarts: {stats.get('restarts', 0)}"
+    )

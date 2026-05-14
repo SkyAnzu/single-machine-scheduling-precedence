@@ -14,6 +14,7 @@ Thư mục gốc hiện tại gồm các phần chính sau:
 - `Graph_in4/`: utility phân tích DAG precedence, vẽ graph, và xuất thống kê Excel
 - `Filenames/`: danh sách tên file instance theo từng kích thước `10, 20, 30, 40, 50`
 - `2016/Ins/`: bộ dữ liệu chính đang dùng trong runner
+- `Dataset_2010/`: lane dữ liệu exploratory theo cảm hứng Liu 2010 (pilot)
 - `2016/`: nơi ghi lời giải và file Excel kết quả thực nghiệm
 - `2013/`: bộ dữ liệu cũ, hiện không được các runner chính sử dụng
 - `validate_solutions.py`: CLI để kiểm tra một file lời giải với một instance
@@ -54,9 +55,15 @@ Runner hiện tại dùng bộ dữ liệu `2016/Ins/` với ánh xạ như sau:
 
 Danh sách filename trong `Filenames/` là nguồn duy nhất để quyết định batch runner và batch visualizer sẽ quét những instance nào.
 
+Lane exploratory `Dataset_2010/` dùng runner riêng:
+
+- `Dataset_2010/Filenames/{20,40,50}.txt`
+- `Dataset_2010/Ins/wtrd_pred{20,40,50}/S/<filename>`
+
 ## Bộ dữ liệu nào đang được dùng
 
 - `2016/Ins/`: bộ dữ liệu chính dùng trong toàn bộ runner hiện tại
+- `Dataset_2010/`: lane exploratory, tách riêng khỏi kết quả mặc định 2016
 - `2013/`: chỉ còn được giữ trong workspace, chưa được nối vào runner hiện tại
 - `2016/Q1/`: đã được loại khỏi Git bằng `.gitignore`
 
@@ -145,6 +152,30 @@ Chức năng:
 - dùng file tạm để lấy kết quả rồi tự xóa
 - in ra `status`, `Lmax`, `time`, và `gap` nếu có
 
+### 4. Runner lane exploratory Dataset_2010
+
+File: `Test/run_batch_dataset_2010.py`
+
+Chức năng:
+
+- đọc danh sách filename từ `Dataset_2010/Filenames/{20,40,50}.txt`
+- resolve instance trong `Dataset_2010/Ins/wtrd_pred{n}/{S|L}/`
+- chạy từng solver trên từng instance
+- ghi file lời giải vào `Dataset_2010/solutions_{solver}/{n}-{type}/`
+- ghi tổng hợp vào `Dataset_2010/results_{solver}.xlsx`
+- hỗ trợ resume từ file Excel đã có
+
+### 5. Script sinh pilot Dataset_2010
+
+File: `Test/generate_dataset_2010_pilot.py`
+
+Chức năng:
+
+- sinh pilot nhỏ (mặc định 24 instances) cho `n = 20, 40, 50`
+- format `.GSP` tương thích parser hiện tại
+- sinh deadline theo công thức kiểu 2016: `deadline_i ~ U[d_i, d_i + phi*P]`
+- ghi filelist tương ứng trong `Dataset_2010/Filenames/`
+
 ## Timeout hiện được định nghĩa thế nào
 
 Đây là điểm quan trọng cho thực nghiệm:
@@ -158,6 +189,11 @@ Nói ngắn gọn:
 
 - `300s` là hard timeout về mặt báo cáo và phân tích thực nghiệm
 - `20s` chỉ là grace nội bộ để subprocess cleanup
+
+Ngoại lệ lane exploratory `Dataset_2010`:
+
+- `Test/run_batch_dataset_2010.py` mặc định timeout `60s`/instance (theo mốc bài 2010)
+- vẫn có thể override bằng `--timeout <seconds>`
 
 Chỗ triển khai nằm ở:
 
@@ -238,6 +274,13 @@ Sau khi cài, hai script `Graph_in4/visualize_gsp.py` và `Graph_in4/export_stat
 .venv\Scripts\python Test\run_batch_from_filelist.py --types S
 .venv\Scripts\python Test\run_batch_from_filelist.py --types L
 .venv\Scripts\python Test\run_batch_from_filelist.py --types S L --solvers seqcounter seqcardenc seqcardenc_ver2 seqcardenc_ver3 basicsat pbenc gurobi
+```
+
+### Sinh va chay pilot Dataset_2010
+
+```bash
+.venv\Scripts\python Test\generate_dataset_2010_pilot.py
+.venv\Scripts\python Test\run_batch_dataset_2010.py --types S --solvers seqcardenc_ver2 --sizes 20 40 50 --timeout 60
 ```
 
 ### Runner cho bộ benchmark đặc biệt

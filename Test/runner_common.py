@@ -203,34 +203,46 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
 
 def parse_solution_file(solution_file: Path, solver: str, default_status: str):
     if not solution_file.exists():
-        return "-", "ERROR" if default_status == "FINISHED" else default_status, None
+        return "-", "ERROR" if default_status == "FINISHED" else default_status, None, {}
 
     try:
         lines = solution_file.read_text(encoding="utf-8").splitlines()
         if not lines:
-            return "-", "ERROR" if default_status == "FINISHED" else default_status, None
+            return "-", "ERROR" if default_status == "FINISHED" else default_status, None, {}
+
+        # Parse STATS line (appended at end of file by SAT solvers)
+        sat_stats = {}
+        for line in lines:
+            if line.strip().startswith("STATS"):
+                for token in line.strip().split()[1:]:
+                    if "=" in token:
+                        k, v = token.split("=", 1)
+                        try:
+                            sat_stats[k] = int(v)
+                        except ValueError:
+                            sat_stats[k] = v
 
         first_line = lines[0].strip()
         if first_line.startswith("Lmax"):
             match = re.search(r"Lmax\s*=\s*(-?\d+)", first_line)
             if not match:
-                return "-", "ERROR" if default_status == "FINISHED" else default_status, None
+                return "-", "ERROR" if default_status == "FINISHED" else default_status, None, sat_stats
             lmax = int(match.group(1))
             gap = None
             if solver == "gurobi" and len(lines) > 1:
                 second_line = lines[1].strip()
                 if second_line.startswith("MIP Gap"):
                     gap = float(second_line.split("=", 1)[1].strip().rstrip("%"))
-            return lmax, default_status, gap
+            return lmax, default_status, gap, sat_stats
 
         if first_line == "UNSAT":
-            return "-", "UNSAT", None
+            return "-", "UNSAT", None, sat_stats
         if first_line == "TIMEOUT":
-            return "-", "TIMEOUT", None
+            return "-", "TIMEOUT", None, sat_stats
         if first_line == "INFEASIBLE":
-            return "-", "INFEASIBLE", None
+            return "-", "INFEASIBLE", None, sat_stats
         if first_line.startswith("STATUS_"):
-            return "-", first_line, None
+            return "-", first_line, None, sat_stats
     except Exception:
         return "-", "ERROR" if default_status == "FINISHED" else default_status, None
 

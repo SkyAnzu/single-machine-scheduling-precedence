@@ -1,0 +1,2 @@
+50_liu_r25_k20_d20_phi125_1.GSP
+50_liu_r25_k20_d60_phi125_1.GSP

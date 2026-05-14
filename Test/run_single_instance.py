@@ -70,7 +70,7 @@ def main():
                 process.wait()
 
         time.sleep(0.1)
-        lmax, status, gap = parse_solution_file(temp_solution, args.solver, status)
+        lmax, status, gap, sat_stats = parse_solution_file(temp_solution, args.solver, status)
 
         if status == "TIMEOUT":
             elapsed = float(args.timeout)
@@ -86,6 +86,11 @@ def main():
     if gap is not None:
         print(f"Gap      : {gap:.2f}%")
     print(f"Time     : {elapsed:.2f}s")
+    if sat_stats:
+        print(f"Conflicts    : {sat_stats.get('conflicts', 'N/A')}")
+        print(f"Decisions    : {sat_stats.get('decisions', 'N/A')}")
+        print(f"Propagations : {sat_stats.get('propagations', 'N/A')}")
+        print(f"Restarts     : {sat_stats.get('restarts', 'N/A')}")
     print("Output   : no persistent solution or Excel file written")
     print("=" * 70)
 

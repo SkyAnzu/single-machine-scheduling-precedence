@@ -1,91 +1,120 @@
 # Experiment Runbook
 
 ## Purpose
-Provide a reproducible operational procedure for running benchmark experiments.
+Provide a reproducible procedure for running experiments in this repository.
 
 ## Environment Baseline
-- Platform: repository local environment.
-- Python environment: `.venv` in repository root.
-- Dependencies: `requirements.txt`.
-- Optional baseline solver: `gurobi` with local license file.
+- Platform: local repository workspace
+- Python environment: `.venv`
+- Dependencies: `requirements.txt`
+- Optional local baseline: `gurobi` with a local `gurobi.lic`
 
-## Core Runner Paths
-- Batch runner: `Test/run_batch_from_filelist.py`
+## Core Paths
+- Main batch runner: `Test/run_batch_from_filelist.py`
 - Special benchmark runner: `Test/run_instances_05_025_125_50_1.py`
-- Single instance runner: `Test/run_single_instance.py`
+- Single-instance diagnostic runner: `Test/run_single_instance.py`
+- Generated demo runner: `Test/run_batch_dataset_2010.py`
+- Generated demo creator: `Test/generate_dataset_2010_pilot.py`
 
-## Solver Set Policy
-
-### Mandatory SAT family set
-- `seqcardenc`
-- `seqcardenc_ver2`
-- `seqcardenc_ver3`
-- any new `seqcardenc_*` under evaluation
-
-### Optional external baseline
-- `gurobi`
+## Default vs Explicit Solver Selection
+- `common/project_paths.py` defines `DEFAULT_SOLVERS = ["seqcounter", "gurobi"]`
+- That default is a convenience setting, not a research protocol
+- For benchmark work, pass `--solvers` explicitly
 
 ## Timeout Profiles
 
-### Profile T-A (default 2016 lane)
-- Per-instance timeout: 300 seconds.
+### Profile A: Default 2016 Lane
+- Per-instance timeout: 300 seconds
+- Applied by:
+  - `Test/run_batch_from_filelist.py`
+  - `Test/run_instances_05_025_125_50_1.py`
 
-### Profile T-B (exploratory lane)
-- Per-instance timeout may differ by exploratory dataset characteristics.
-- Any non-default timeout must be explicitly declared in run metadata.
-- Current `Dataset_2010` pilot default: 60 seconds per instance (aligned with Liu 2010 setting).
+### Profile B: Generated Demo Lane
+- Default per-instance timeout: 60 seconds
+- Applied by `Test/run_batch_dataset_2010.py`
+- Override is allowed via `--timeout`, but the report must record it
 
-## Fair-Comparison Checklist
-Before comparing two solver versions, confirm:
-1. Same instance list.
-2. Same preprocessing workflow.
-3. Same timeout profile.
-4. Same machine context.
-5. Same output parsing policy.
+## Pre-Run Checklist
+Before comparing solver versions, confirm:
+1. same dataset lane
+2. same authoritative filelists
+3. same preprocessing path (`window_tightening` through `Test/runner_common.py`)
+4. same timeout profile
+5. same machine context
+6. same objective semantics and code state
 
 ## Standard Command Patterns
 
-### SAT family benchmark on default lane
+### SAT-family benchmark on the default 2016 lane
 ```bash
 .venv\Scripts\python Test\run_batch_from_filelist.py --types S L --solvers seqcardenc seqcardenc_ver2 seqcardenc_ver3
 ```
 
-### Tier B pilot generation (Dataset_2010)
+### Expanded solver sweep on the default 2016 lane
 ```bash
-.venv\Scripts\python Test\generate_dataset_2010_pilot.py
+.venv\Scripts\python Test\run_batch_from_filelist.py --types S L --solvers seqcounter seqcardenc seqcardenc_ver2 seqcardenc_ver3 basicsat pbenc gurobi
 ```
 
-### Tier B pilot benchmark run (Dataset_2010 lane)
+### Special benchmark family `XX_05_025_125_50_1.GSP`
 ```bash
-.venv\Scripts\python Test\run_batch_dataset_2010.py --types S --solvers seqcardenc_ver2 --sizes 20 40 50 --timeout 60
+.venv\Scripts\python Test\run_instances_05_025_125_50_1.py --types S L --solvers seqcardenc_ver2 seqcardenc_ver3 gurobi
 ```
 
-### Optional cross-paradigm baseline run
-```bash
-.venv\Scripts\python Test\run_batch_from_filelist.py --types S L --solvers seqcardenc_ver2 gurobi
-```
-
-### Single-instance diagnostic check
+### Single-instance diagnostic run
 ```bash
 .venv\Scripts\python Test\run_single_instance.py "2016\Ins\wtrd_pred10\S\10_05_005_100_25_1.GSP" --solver seqcardenc_ver3 --timeout 120
 ```
 
+### Generate the `Dataset_2010` demo lane
+```bash
+.venv\Scripts\python Test\generate_dataset_2010_pilot.py
+```
+
+### Run the `Dataset_2010` demo lane
+```bash
+.venv\Scripts\python Test\run_batch_dataset_2010.py --types S --solvers seqcardenc_ver2 --sizes 20 40 50 --timeout 60
+```
+
+### Graph and dataset diagnostics
+```bash
+.venv\Scripts\python Graph_in4\visualize_gsp.py --file "2016\Ins\wtrd_pred10\S\10_05_005_100_25_1.GSP"
+.venv\Scripts\python Graph_in4\visualize_gsp.py --folder "2016\Ins" --workers 4
+.venv\Scripts\python Graph_in4\visualize_batch_from_filelist.py --sizes 10 20 --types S L --workers 4
+.venv\Scripts\python Graph_in4\export_stats.py --folder "2016\Ins" --out "Graph_in4\gsp_statistics.xlsx"
+```
+
 ## Output Expectations
-- Solver result workbooks under `2016/results_*.xlsx`.
-- Solution text files under `2016/solutions_{solver}/...` when using batch runners.
-- Single-instance runner writes temporary outputs only.
-- Tier B pilot outputs:
-  - `Dataset_2010/results_{solver}.xlsx`
-  - `Dataset_2010/solutions_{solver}/{n}-{type}/...`
 
-## Lane Separation Rule
-- Timed benchmark lane and diagnostic lane should be separated when diagnostics add overhead.
-- Do not mix diagnostic-heavy runs into the main runtime summary without explicit labeling.
+### Default 2016 lane
+- workbook: `2016/results_{solver}.xlsx`
+- solutions: `2016/solutions_{solver}/{n}-{type}/...`
+- solution files giữ schedule chi tiết để phục vụ audit sau run
+- SAT stats không được coi là artifact batch mặc định
+- `time_s` trong workbook là subprocess wall time, không phải pure solver-search time
+- `TIME_LIMIT_FEASIBLE` means Gurobi found an incumbent at the time limit with nonzero MIP gap; workbook `Lmax` is `-` and `gap_%` carries the gap
 
-## Minimum Run Metadata to Record
-- date/time
-- solver set
-- dataset lane
-- timeout profile
-- command line used
-- workspace commit hash (recommended)
+### Special benchmark family
+- workbook: `2016/results_{solver}_05_025_125_50_1.xlsx`
+
+### Single-instance diagnostic
+- no persistent workbook
+- no persistent solution file
+- temporary files only
+- SAT stats được ưu tiên hiển thị ở mode này khi solver cung cấp được
+
+### Generated demo lane
+- workbook: `Dataset_2010/results_{solver}.xlsx`
+- solutions: `Dataset_2010/solutions_{solver}/{n}-{type}/...`
+- `time_s` trong workbook là subprocess wall time
+
+## Post-Run Checklist
+After a run:
+1. record the exact command line
+2. note the dataset lane and filelist source
+3. record the timeout profile
+4. identify the solver set
+5. mark whether the compared solvers share the same objective semantics
+6. save supporting workbook paths and any logs used in the analysis
+
+## Important Interpretation Rule
+The current active solver set is objective-aligned to true `Lmax = max(C_j - d_j)`, but historical result files may predate that alignment. Treat mixed-code-state results as diagnostics unless the objective semantics and code revision are documented.

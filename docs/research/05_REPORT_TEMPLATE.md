@@ -4,9 +4,12 @@
 - Date:
 - Author:
 - Repository commit:
-- Dataset lane: Tier A / Tier B
+- Dataset lane:
+- Filelist source:
 - Timeout profile:
+- Preprocessing path:
 - Solver set:
+- Objective semantics checked:
 - Commands:
 
 ## 2. Scope of This Report
@@ -14,70 +17,90 @@
 - Reference solver/version:
 - Candidate solver/version:
 - Instance scope:
+- Report type:
+  - clean objective comparison / implementation diagnostic / generated-lane demo
 
-## 3. Correctness Summary
+## 3. Objective-Semantics Note
+- Reference objective behavior:
+- Candidate objective behavior:
+- Are the compared values directly comparable? yes / no
+- If no, what is still being compared fairly?
 
-### 3.1 Status Consistency (shared instances)
+## 4. Status / Feasibility Summary
+
+### 4.1 Shared-instance status comparison
 | Category | Count |
 |---|---:|
 | Shared instances |  |
 | Same status |  |
 | Different status |  |
+| Missing / unparseable |  |
 
-### 3.2 Objective Consistency (shared `FINISHED`)
+### 4.2 Status divergence details
+| Instance | Reference status | Candidate status | Notes |
+|---|---|---|---|
+|  |  |  |  |
+
+## 5. Objective Summary
+Only fill this section for objective-aligned comparisons.
+
+### 5.1 Shared comparable finished instances
 | Category | Count |
 |---|---:|
-| Shared `FINISHED` instances |  |
-| Same `Lmax` |  |
-| Different `Lmax` |  |
+| Shared comparable `FINISHED` instances |  |
+| Same objective value |  |
+| Different objective value |  |
 
-## 4. Runtime Summary
+### 5.2 Objective divergence details
+| Instance | Reference value | Candidate value | Delta | Notes |
+|---|---:|---:|---:|---|
+|  |  |  |  |  |
+
+## 6. Runtime Summary
 | Metric | Reference | Candidate |
 |---|---:|---:|
 | Solved count |  |  |
 | Timeout count |  |  |
-| Mean time (shared `FINISHED`) |  |  |
-| Median time (shared `FINISHED`) |  |  |
+| Mean time on comparable set |  |  |
+| Median time on comparable set |  |  |
 
-### 4.1 Paired Delta View
+### 6.1 Paired runtime view
 | Category | Count |
 |---|---:|
 | Candidate faster |  |
 | Candidate slower |  |
 | Equal time |  |
 
-## 5. Hard-Case Regression Table
-Use this table for high-impact regressions.
-
-| Instance | Reference status/time/Lmax | Candidate status/time/Lmax | Delta | Notes |
+## 7. Hard-Case Divergence Table
+| Instance | Reference status/time/value | Candidate status/time/value | Delta | Notes |
 |---|---|---|---|---|
 |  |  |  |  |  |
 
-## 6. SAT Internal Summary (if collected)
+## 8. SAT / Solver Internal Summary
+Fill when collected.
+
 | Metric | Reference | Candidate | Comment |
 |---|---:|---:|---|
-| decisions |  |  |  |
 | conflicts |  |  |  |
+| decisions |  |  |  |
 | propagations |  |  |  |
+| restarts |  |  |  |
+| MIP gap (if relevant) |  |  |  |
 
-## 7. Clause/Encoding Diagnostics (optional)
-| Metric | Reference | Candidate | Comment |
-|---|---:|---:|---|
-| variables |  |  |  |
-| clauses |  |  |  |
-| binary clauses |  |  |  |
-| ternary clauses |  |  |  |
+## 9. Interpretation
+- Main findings:
+- Likely explanation:
+- Risks / caveats:
+- Dataset-lane caveats:
+- Objective-semantics caveats:
 
-## 8. Interpretation
-- Key observations:
-- Likely mechanism:
-- Risk assessment:
+## 10. Recommendation
+- Decision: keep / reject / iterate
+- Follow-up experiment:
+- Required documentation updates:
 
-## 9. Recommendation
-- Decision: keep / reject / iterate.
-- Required follow-up:
-
-## 10. Evidence Index
-- Result workbook paths:
-- Logs/artifacts:
-- Scripts/commands used:
+## 11. Evidence Index
+- Workbook paths:
+- Solution directories:
+- Logs / console captures:
+- Graph or dataset diagnostics:

@@ -1,59 +1,69 @@
 # SMSP Repository Agent Protocol
 
 ## Purpose
-This file defines agent behavior for this repository.
+This file defines how an agent should reason about this repository.
 
-Primary goal: support internal research on SAT encodings for single-machine scheduling with precedence and time-window style constraints.
+This workspace supports internal research on SAT encodings for single-machine scheduling with precedence constraints and time-window-style data.
 
-## Repository Scope
-- Default dataset lane: current `2016/Ins` workflow used by runners in `Test/`.
-- Primary solver family: `seqcardenc`, `seqcardenc_ver2`, `seqcardenc_ver3`, and future `seqcardenc_*` versions.
-- Optional external baseline lane: `gurobi`.
+The repository is not a paper-faithful implementation of a single source paper. It combines:
+- Liu 2010 as the main objective reference for maximum lateness reasoning.
+- Davari et al. 2016 as the practical source of the `.GSP`-style data fields and the default workspace lane under `2016/Ins/`.
+
+## Repository Facts
+- Default benchmark lane: `2016/Ins/`, driven by type-specific `Filenames/{size}-{type}.txt` when present and `Filenames/{size}.txt` otherwise.
+- Exploratory generated lane: `Dataset_2010/`, currently a demo/pilot lane produced by `Test/generate_dataset_2010_pilot.py`.
+- Main experimental runners live in `Test/`.
+- Encoding variants live in `Encoding/` and represent incremental experiments; preserve their distinctions when documenting or comparing them.
+- Graph and visual diagnostics live in `Graph_in4/`.
 
 ## Non-Negotiable Rules
 1. Correctness first.
    - Never claim improvement if status consistency or objective consistency is broken.
 2. Fair comparison required.
-   - Same instance list, same preprocessing, same timeout profile, same machine context.
-3. No performance claim from clause count alone.
+   - Same filelists, same preprocessing, same timeout profile, same machine context.
+3. Objective semantics must be checked explicitly.
+   - Do not assume every solver in the repository optimizes the same objective.
+4. No performance claim from clause count alone.
    - Runtime and solver statistics must support conclusions.
-4. Report regressions honestly.
+5. Report regressions honestly.
    - If a new encoding is worse on hard cases, state it explicitly and provide evidence.
+
+## Objective-Semantics Rule
+At the current repository state, `seqcounter`, `seqcardenc`, `seqcardenc_ver2`, `seqcardenc_ver3`, `pbenc`, `basicsat`, and `gurobi` use true `Lmax = max(C_j - d_j)` behavior in the optimization workflow.
+
+Therefore:
+- Objective comparisons across these current solvers are allowed only after status consistency and output parsing are checked.
+- Historical result workbooks may predate this alignment; do not mix old and new results without recording the code state.
+- When in doubt, say exactly which solver set and objective behavior were used.
 
 ## Evaluation Lanes
 
 ### Lane A: SAT Family Benchmark (mandatory)
-- Compare versions inside the `seqcardenc` family.
+- Primary family: `seqcardenc`, `seqcardenc_ver2`, `seqcardenc_ver3`, and future `seqcardenc_*` variants.
 - Required outputs:
-  - Correctness: status and Lmax consistency.
-  - Runtime: solved/timeout and wall-clock summaries.
-  - SAT internals: decisions, conflicts, propagations (when collected).
+  - status consistency
+  - objective consistency inside an objective-aligned set
+  - runtime summary
+  - SAT internals when collected
 
 ### Lane B: Cross-Paradigm Baseline (optional)
-- Compare SAT lane against `gurobi` to position SAT in the broader optimization picture.
-- This lane is optional per run and not required for every benchmark.
+- Use `gurobi` as an external baseline when helpful.
+- Keep objective-semantics caveats explicit.
 
-### Lane C: Diagnostic Deep-Dive (optional)
-- Use for propagation diagnostics, clause-structure analysis, and root-cause checks.
-- Keep separate from the timed benchmark lane when instrumentation overhead can bias runtime.
+### Lane C: Generated-Data Diagnostics (optional)
+- Use `Dataset_2010/` for demo/pilot exploration and stress testing.
+- Do not silently merge this lane into default `2016` summaries.
 
-## Mandatory Comparison Checks
-For any new `seqcardenc` version:
-1. Shared-instance status comparison versus reference version.
-2. Lmax comparison on shared `FINISHED` cases.
-3. Runtime summary with paired deltas.
-4. Hard-case regression table.
-5. SAT internal summary (if collected in that run).
-
-## Dataset Policy (high level)
-- Follow `docs/research/02_DATASET_POLICY.md`.
-- Do not silently mix exploratory datasets into default 2016 benchmark summaries.
-- If data anomalies are detected, record them in the decision log before claiming results.
+## Filelist Authority
+- `Filenames/{size}-{type}.txt`, when present, are the type-specific source of truth for the default 2016 batch lane.
+- Otherwise, `Filenames/{size}.txt` is used as the fallback source of truth for the default 2016 batch lane.
+- `Dataset_2010/Filenames/*.txt` are the source of truth for the generated demo lane.
+- If a folder contains more `.GSP` files than the current filelist, runners still follow the filelist.
 
 ## Reporting Requirements
-- Use the template in `docs/research/05_REPORT_TEMPLATE.md`.
-- Keep conclusions evidence-based and reproducible.
-- Include exact commands and timeout profile used.
+- Use `docs/research/05_REPORT_TEMPLATE.md`.
+- Include exact commands, timeout profile, dataset lane, and objective semantics.
+- Separate facts, interpretation, and recommendations.
 
 ## Change Management
 - Record protocol-affecting changes in `docs/research/06_DECISION_LOG.md`.
@@ -61,9 +71,14 @@ For any new `seqcardenc` version:
   - timeout profile update
   - solver set update
   - dataset lane change
-  - metric definition change
+  - objective definition / evaluation rule change
+  - filelist policy change
+
+## Documentation Policy
+- When documentation and code disagree, trust the current runners, filelists, and parser behavior first.
+- Update documentation to match the current workspace instead of assuming intended behavior.
 
 ## Communication Style
 - Keep responses concise, technical, and actionable.
-- Separate facts, interpretation, and recommendations.
-- If uncertain, state assumptions explicitly.
+- State assumptions explicitly.
+- Separate repository facts from research interpretation.

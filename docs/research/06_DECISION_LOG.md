@@ -1,6 +1,6 @@
 # Decision Log
 
-Use this file to record protocol-affecting decisions.
+Use this file to record protocol-affecting decisions, documentation realignments, and data-lane anomalies that change how results should be interpreted.
 
 ## Entry Template
 - Date:
@@ -93,3 +93,84 @@ Use this file to record protocol-affecting decisions.
   - Low. Only changes default in exploratory lane runner.
 - Follow-up actions:
   - If comparing with Tier A, always report timeout profile explicitly.
+
+---
+
+## 2026-05-19 | D-004
+- Context:
+  - Markdown documentation had drifted from the current workspace state.
+  - The repository combines a 2016-format data lane with a Liu-2010-inspired `Lmax` research objective.
+  - `Dataset_2010/` is currently used as a generated demo/pilot lane rather than a default benchmark lane.
+  - The current `Dataset_2010/Filenames/50.txt` does not enumerate all generated `.GSP` files presently stored under `Dataset_2010/Ins/wtrd_pred50/S/`.
+  - Some documentation referenced files that are not in the repository anymore.
+- Decision:
+  - Realign markdown documentation with the current runners, parser behavior, filelists, and research context.
+  - Treat filelists as authoritative for batch execution.
+  - Document `Dataset_2010/` as a demo/pilot lane.
+  - Document the current objective-semantics mismatch across solvers instead of assuming a uniform `Lmax` implementation.
+- Rationale:
+  - Prevent inaccurate benchmark claims.
+  - Preserve reproducibility without changing code or datasets.
+  - Make the repo documentation reflect the actual workspace rather than historical assumptions.
+- Evidence:
+  - `common/project_paths.py` sets the default lane to `2016/Ins/`.
+  - `Test/generate_dataset_2010_pilot.py` is the current generated-data entry point.
+  - `Dataset_2010/Filenames/50.txt` lists fewer instances than are currently present in `Dataset_2010/Ins/wtrd_pred50/S/`.
+  - `README.md` referenced `AIREADME.md` and `Test/rewrite_existing_solutions.py`, both absent from the repo.
+  - Objective implementations differ across current solver files.
+- Impacted files/process:
+  - Updated: `README.md`
+  - Updated: `AGENTS.md`
+  - Updated: `CLAUDE.md`
+  - Updated: `docs/research/01_PROTOCOL_SCOPE.md`
+  - Updated: `docs/research/02_DATASET_POLICY.md`
+  - Updated: `docs/research/03_EXPERIMENT_RUNBOOK.md`
+  - Updated: `docs/research/04_METRICS_GUIDE.md`
+  - Updated: `docs/research/05_REPORT_TEMPLATE.md`
+  - Updated: `docs/research/06_DECISION_LOG.md`
+- Risk:
+  - Low. Documentation-only change.
+- Follow-up actions:
+   - If objective semantics are later unified in code, add a new decision-log entry and update the docs again.
+   - If the generated `Dataset_2010` lane is promoted beyond demo use, freeze the authoritative filelists and record the generation policy.
+
+---
+
+## 2026-05-20 | D-005
+- Context:
+  - SAT solvers still had clamped lateness logic in incremental optimization, while the research protocol targets Liu-style true `Lmax`.
+  - `10-L` used fewer physical files than `10-S`, so a size-only filelist caused missing inputs on that lane.
+  - Gurobi time-limit incumbents with nonzero MIP gap were previously indistinguishable from finished optimal runs in workbook status.
+- Decision:
+  - Align `seqcounter`, `seqcardenc`, `seqcardenc_ver2`, `seqcardenc_ver3`, and `pbenc` to true `Lmax = max(C_j - d_j)`.
+  - Keep `basicsat` on true `Lmax` and remove its positive-only incremental stop condition.
+  - Add type-specific filelist lookup for the default 2016 lane, with `Filenames/{size}-{type}.txt` preferred over `Filenames/{size}.txt`.
+  - Record Gurobi time-limit incumbents with nonzero MIP gap as `TIME_LIMIT_FEASIBLE` and workbook `Lmax = -`.
+  - Rename the `seqcardenc_ver2` / `seqcardenc_ver3` source-job clause terminology from symmetry breaking to source-ready anchoring.
+- Rationale:
+  - Cross-solver objective comparisons require aligned objective semantics.
+  - Filelist authority must reflect lane-specific available files without deleting valid `S` instances.
+  - A nonzero-gap Gurobi incumbent is useful evidence but not an optimal objective value.
+- Evidence:
+  - Updated SAT optimization loops now search for strict improvements to true `Lmax`, including negative values.
+  - Added `Filenames/10-L.txt` for the current 10-job `L` lane.
+  - Runner parser recognizes `TIME_LIMIT_FEASIBLE` separately from `FINISHED` and `TIMEOUT`.
+- Impacted files/process:
+  - Updated: `Encoding/functions_seqcounter.py`
+  - Updated: `Encoding/functions_seqcardenc.py`
+  - Updated: `Encoding/functions_seqcardenc_ver2.py`
+  - Updated: `Encoding/functions_seqcardenc_ver3.py`
+  - Updated: `Encoding/functions_pbenc.py`
+  - Updated: `Encoding/functions_basicsat.py`
+  - Updated: `Encoding/functions_gurobi.py`
+  - Updated: `Test/runner_common.py`
+  - Updated: `Test/run_batch_from_filelist.py`
+  - Updated: `Graph_in4/visualize_batch_from_filelist.py`
+  - Added: `Filenames/10-L.txt`
+  - Updated: repository protocol docs
+- Risk:
+  - Medium. Historical result workbooks may no longer be objective-comparable with new runs.
+  - SAT runtime may change because optimization no longer stops at `Lmax <= 0`.
+- Follow-up actions:
+  - Re-run objective comparisons under the aligned code state before making solver-performance claims.
+  - Label or archive old workbooks if they are kept for historical diagnostics.

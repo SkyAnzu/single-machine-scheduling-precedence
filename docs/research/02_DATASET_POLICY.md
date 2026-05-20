@@ -1,40 +1,40 @@
 # Dataset Policy
 
 ## Purpose
-Define dataset lanes, default usage, and integrity rules for fair and reproducible experiments.
+Define dataset lanes, input authority, and reproducibility rules for this repository.
 
 ## Dataset Lanes
 
-### Tier A (default): Current 2016 Workspace Dataset
-- Source lane used by default benchmark runners:
-  - `2016/Ins/wtrd_pred{n}/{S|L}/...`
-- Primary instance list source:
-  - `Filenames/{10,20,30,40,50}.txt`
-- This is the default lane for SAT family benchmarking and regression tracking.
+### Tier A: Default 2016 Workspace Lane
+- Root path: `2016/Ins/`
+- Folder layout: `2016/Ins/wtrd_pred{10,20,30,40,50}/{S|L}/`
+- Authoritative instance lists: `Filenames/{size}-{type}.txt` when present, otherwise `Filenames/{size}.txt`
+- This is the default lane for benchmark summaries and regression tracking.
 
-### Tier B (exploratory): 2010/2014-Inspired Datasets
-- Used for exploratory robustness checks and future expansion.
-- Not part of default benchmark summaries unless explicitly stated.
-- Any Tier B run must clearly label:
-  - generation policy
-  - parameter grid
-  - random seed policy
-  - compatibility mapping to repository format
-- Current Tier B pilot lane path:
-  - `Dataset_2010/Ins/wtrd_pred{n}/{S|L}/...`
-  - `Dataset_2010/Filenames/{n}.txt`
+### Tier B: Generated 2010 Demo Lane
+- Root path: `Dataset_2010/Ins/`
+- Authoritative instance lists: `Dataset_2010/Filenames/{20,40,50}.txt`
+- Current usage: demo / pilot generation, exploratory diagnostics, stress checks
+- Current generator: `Test/generate_dataset_2010_pilot.py`
+- This lane is not the default benchmark lane.
 
-### Tier B Pilot Scope (current)
-- Objective: small pilot for monitoring behavior before large-scale generation.
-- Current pilot size: 24 instances total.
-- Size split: `n in {20, 40, 50}` with 8 instances per size.
-- Current type split: `S` only.
-- Deadline policy (2016-style mapping):
-  - `deadline_i ~ U[d_i, d_i + phi * P]`, `P = sum(p_i)`.
-  - Default pilot uses `phi = 1.25`.
+## Why Two Lanes Exist
+- The 2016 lane gives the repository its working `.GSP` structure and the currently used benchmark inputs.
+- The 2010 demo lane exists because the research question also references Liu 2010 and needs a controllable generated lane for exploration.
+- The two lanes must remain distinguishable in every report.
+
+## Filelist Authority Rule
+Batch execution is defined by filelists, not by folder enumeration.
+
+This means:
+- main 2016 runs first look for `Filenames/{size}-{type}.txt`, then fall back to `Filenames/{size}.txt`
+- for example, `Filenames/10-L.txt` defines the current `10-L` batch list, while `10-S` falls back to `Filenames/10.txt`
+- generated demo runs follow `Dataset_2010/Filenames/*.txt`
+- extra `.GSP` files present in a folder are not automatically part of the benchmark
+- if folder contents and filelists differ, treat the filelists as authoritative until a documented change says otherwise
 
 ## Required Input Format
-All benchmark datasets used by repository runners must conform to `.GSP` parser expectations in `common/dataset.py`:
+All runner-compatible datasets must match the `.GSP` expectations used in `common/dataset.py`:
 - `n`
 - `weight`
 - `duration`
@@ -43,31 +43,41 @@ All benchmark datasets used by repository runners must conform to `.GSP` parser 
 - `deadline`
 - `precedence relations`
 
-If a source dataset does not provide all required fields (for example, no explicit deadlines), a documented mapping policy must be defined before use.
+## Weight-Field Note
+The `weight` field is retained for format compatibility with the 2016-style input structure.
+Current `Lmax`-oriented workflows do not use the weight values in the objective.
 
-## Data Integrity Checklist (General)
-Before any benchmark summary:
+## Current Generated-Lane Note
+`Dataset_2010/` is currently a demo/pilot lane. The workspace may contain generated files that are not all listed in the current filelists. Reports and runners must still follow the filelists unless the generation policy and benchmark scope are re-frozen.
+
+## Data Integrity Checklist
+Before reporting results:
 1. Parser validity:
-   - all files parse successfully with repository parser
-2. Value sanity:
-   - non-negative processing times
-   - sensible time-window fields for the intended formulation
-3. Graph sanity:
-   - precedence structure is valid for the runner workflow
-4. Instance list consistency:
-   - benchmark run uses a clearly defined and reproducible file list
+   - all used files parse with the repository parser
+2. Filelist integrity:
+   - the exact filelists used are known and archived
+3. Value sanity:
+   - processing times are non-negative
+   - ready dates, due dates and deadlines are numerically sensible for the intended experiment
+4. Graph sanity:
+   - precedence structure is acyclic for the runner workflow
 5. Lane separation:
-   - Tier A and Tier B results are not mixed silently in one summary
+   - Tier A and Tier B results are not silently merged
+6. Objective annotation:
+   - the report states whether the compared solvers share the same objective semantics
 
 ## Reproducibility Requirements for Generated Data
-For any generated or transformed dataset, record:
-- generator script path and commit id
-- random seeds
+For any generated lane or transformed dataset, record:
+- generator script path
+- commit hash or workspace snapshot
+- random seed
 - parameter grid
-- output directory layout
-- any post-processing or filtering rules
+- output root
+- authoritative filelists
+- any filtering or pruning applied after generation
 
 ## Reporting Rules
-- Every result table must identify the dataset lane (Tier A or Tier B).
-- Default performance claims should be made on Tier A unless explicitly marked otherwise.
-- If anomalies are detected, record them in `docs/research/06_DECISION_LOG.md` before final claims.
+- Every result table must state the dataset lane.
+- Default repository claims should be based on Tier A unless explicitly stated otherwise.
+- Demo / pilot results from `Dataset_2010/` must be labeled as exploratory.
+- Any filelist / folder mismatch that affects interpretation should be recorded in `docs/research/06_DECISION_LOG.md`.

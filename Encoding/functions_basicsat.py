@@ -220,7 +220,7 @@ def incremental_SAT_Lmax(durations, due_dates, S_dict, placeholder, cnf, UB, sol
     if verbose:
         print("\n=== SOLVING INCREMENTAL SAT ===")
     
-    while UB > 0:
+    while True:
         # Check timeout
         elapsed = time.time() - start_time
         if elapsed >= timeout:
@@ -248,16 +248,14 @@ def incremental_SAT_Lmax(durations, due_dates, S_dict, placeholder, cnf, UB, sol
             
             model = solver.get_model()
             best_schedule = {}
-            Lmax = 0
-            
+
             # Extract schedule from model
-            for var_id in range(1, len(S_dict) + 1):
-                if var_id <= len(model) and model[var_id - 1] > 0:
-                    if var_id in var_to_S:
-                        i, t = var_to_S[var_id]
-                        lateness = t + durations[i] - due_dates[i]
-                        Lmax = max(Lmax, lateness)
-                        best_schedule[i] = t
+            for var in model:
+                if var > 0 and var in var_to_S:
+                    i, t = var_to_S[var]
+                    best_schedule[i] = t
+
+            Lmax = compute_UB_Lmax(best_schedule, durations, due_dates)
             
             if verbose:
                 print(f"New Lmax: {Lmax}")
@@ -278,6 +276,7 @@ def incremental_SAT_Lmax(durations, due_dates, S_dict, placeholder, cnf, UB, sol
                 print("UNSAT - cannot improve further")
             break
     
+    stats = solver.accum_stats()
     solver.delete()
     
     # Write final solution (in case timeout was hit)
@@ -288,6 +287,14 @@ def incremental_SAT_Lmax(durations, due_dates, S_dict, placeholder, cnf, UB, sol
             f.flush()
     
     if verbose:
+        with open(sol_file, "a", encoding="utf-8") as f:
+            f.write(
+                f"STATS "
+                f"conflicts={stats.get('conflicts', 0)} "
+                f"decisions={stats.get('decisions', 0)} "
+                f"propagations={stats.get('propagations', 0)} "
+                f"restarts={stats.get('restarts', 0)}\n"
+            )
         print(f"\nIncremental SAT finished.")
         print(f"Best Lmax found: {best_Lmax}")
     

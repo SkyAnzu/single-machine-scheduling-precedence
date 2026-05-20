@@ -158,7 +158,7 @@ def validate_schedule(schedule, durations, ready_dates, deadlines, successors):
 
 
 def compute_UB_Lmax(schedule, durations, due_dates):
-    return compute_max_lateness(schedule, durations, due_dates, clamp_zero=True)
+    return compute_max_lateness(schedule, durations, due_dates, clamp_zero=False)
 
 
 def incremental_SAT_Lmax(durations, due_dates, S, L, cnf, UB, sol_file, valid_starts, verbose=False):
@@ -169,8 +169,6 @@ def incremental_SAT_Lmax(durations, due_dates, S, L, cnf, UB, sol_file, valid_st
     print("\n=== SOLVING INCREMENTAL SAT ===")
 
     while True:
-        if UB <= 0:
-            break
         iteration_count += 1
         if verbose:
             print("\n==============================")
@@ -178,8 +176,11 @@ def incremental_SAT_Lmax(durations, due_dates, S, L, cnf, UB, sol_file, valid_st
             print("Iteration:", iteration_count)
 
         for j in range(1, len(durations) + 1):
-            if due_dates[j] + UB - durations[j] - 1 < valid_starts[j][-1]:
-                solver.add_clause([L[(j, due_dates[j] + UB - durations[j] - 1)]])
+            latest_start = due_dates[j] + UB - durations[j] - 1
+            if latest_start < valid_starts[j][0]:
+                solver.add_clause([])
+            elif latest_start < valid_starts[j][-1]:
+                solver.add_clause([L[(j, latest_start)]])
 
         if solver.solve():
             if verbose:
@@ -188,15 +189,13 @@ def incremental_SAT_Lmax(durations, due_dates, S, L, cnf, UB, sol_file, valid_st
             assert raw_model is not None, "Solver returned SAT but model is None"
             model = raw_model
             best_schedule = {}
-            Lmax = 0
 
-            for j in range(0, len(S)):
-                if model[j] > 0:
-                    i, t = var_to_S[model[j]]
-                    late = max(0, t + durations[i] - due_dates[i])
-                    if late > Lmax:
-                        Lmax = late
+            for var in model:
+                if var > 0 and var in var_to_S:
+                    i, t = var_to_S[var]
                     best_schedule[i] = t
+
+            Lmax = compute_UB_Lmax(best_schedule, durations, due_dates)
 
             if verbose:
                 print("New Lmax UB:", Lmax)
@@ -215,21 +214,23 @@ def incremental_SAT_Lmax(durations, due_dates, S, L, cnf, UB, sol_file, valid_st
     stats = solver.accum_stats()
     solver.delete()
 
-    with open(sol_file, "a", encoding="utf-8") as handle:
-        handle.write(
-            f"STATS "
-            f"conflicts={stats.get('conflicts', 0)} "
-            f"decisions={stats.get('decisions', 0)} "
-            f"propagations={stats.get('propagations', 0)} "
-        f"restarts={stats.get('restarts', 0)}\n"
-    )
+    if verbose:
+        with open(sol_file, "a", encoding="utf-8") as handle:
+            handle.write(
+                f"STATS "
+                f"conflicts={stats.get('conflicts', 0)} "
+                f"decisions={stats.get('decisions', 0)} "
+                f"propagations={stats.get('propagations', 0)} "
+                f"restarts={stats.get('restarts', 0)}\n"
+            )
 
     print("Incremental SAT finished.")
     print("Best Lmax UB found:", UB)
-    print(
-        f"SAT stats — iterations: {iteration_count}, "
-        f"conflicts: {stats.get('conflicts', 0)}, "
-        f"decisions: {stats.get('decisions', 0)}, "
-        f"propagations: {stats.get('propagations', 0)}, "
-        f"restarts: {stats.get('restarts', 0)}"
-    )
+    if verbose:
+        print(
+            f"SAT stats — iterations: {iteration_count}, "
+            f"conflicts: {stats.get('conflicts', 0)}, "
+            f"decisions: {stats.get('decisions', 0)}, "
+            f"propagations: {stats.get('propagations', 0)}, "
+            f"restarts: {stats.get('restarts', 0)}"
+        )

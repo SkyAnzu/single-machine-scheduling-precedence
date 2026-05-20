@@ -147,7 +147,9 @@ def solve_with_gurobi(n, durations, ready_dates, due_dates, deadlines, successor
                 schedule = {i: int(S[i].X) for i in range(1, n+1)}
                 lmax = int(Lmax.X)
                 gap = model.MIPGap * 100  # convert to percentage
-                return schedule, lmax, True, solve_time, gap
+                if gap <= 0:
+                    return schedule, lmax, True, solve_time, 0.0
+                return schedule, lmax, "TIME_LIMIT_FEASIBLE", solve_time, gap
             else:
                 # Timeout occurred before any solution was found
                 # Return a special status so the runner can detect TIMEOUT

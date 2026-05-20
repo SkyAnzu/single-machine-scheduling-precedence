@@ -126,7 +126,11 @@ def main(solvers=None, instance_types=None):
                         process.wait()
 
                 time.sleep(0.1)
-                lmax, status, gap = parse_solution_file(solution_file, solver, status)
+                parsed = parse_solution_file(solution_file, solver, status)
+                if len(parsed) == 4:
+                    lmax, status, gap, _ = parsed
+                else:
+                    lmax, status, gap = parsed
 
                 if status == "TIMEOUT":
                     elapsed = float(TIMEOUT)

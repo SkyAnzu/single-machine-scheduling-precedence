@@ -15,8 +15,15 @@ from Graph_in4.visualize_gsp import SCRIPT_DIR, _worker
 OUTPUT_ROOT = SCRIPT_DIR / "graph_batch"
 
 
-def load_filename_list(size: int):
-    filelist = FILENAMES_DIR / f"{size}.txt"
+def load_filename_list(size: int, instance_type: str = None):
+    if instance_type is not None:
+        type_specific = FILENAMES_DIR / f"{size}-{instance_type}.txt"
+        if type_specific.exists():
+            filelist = type_specific
+        else:
+            filelist = FILENAMES_DIR / f"{size}.txt"
+    else:
+        filelist = FILENAMES_DIR / f"{size}.txt"
     if not filelist.exists():
         return None
     return [line.strip() for line in filelist.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -30,12 +37,12 @@ def collect_tasks(selected_sizes, selected_types, limit_per_dataset=None):
     tasks = []
 
     for size in selected_sizes:
-        filenames = load_filename_list(size)
-        if filenames is None:
-            print(f"[SKIP] size={size} - file list not found")
-            continue
-
         for instance_type in selected_types:
+            filenames = load_filename_list(size, instance_type)
+            if filenames is None:
+                print(f"[SKIP] size={size}, type={instance_type} - file list not found")
+                continue
+
             dataset_name = f"{size}-{instance_type}"
             dataset_count = 0
             for filename in filenames:

@@ -73,12 +73,12 @@ def main(solvers=None, instance_types=None):
                 print(f"    [WARNING] Could not read Excel file: {exc}")
 
         for size in DATASET_SIZES:
-            instances = load_filename_list(size)
-            if instances is None:
-                print(f"[SKIP] size={size} - file list not found")
-                continue
-
             for instance_type in selected_types:
+                instances = load_filename_list(size, instance_type)
+                if instances is None:
+                    print(f"[SKIP] size={size}, type={instance_type} - file list not found")
+                    continue
+
                 sheet = dataset_sheet(size, instance_type)
                 print(f"\n>>> Dataset: {sheet} - {len(instances)} instances")
 
@@ -142,7 +142,11 @@ def main(solvers=None, instance_types=None):
                             process.wait()
 
                     time.sleep(0.1)
-                    lmax, status, gap = parse_solution_file(solution_file, solver, status)
+                    parsed = parse_solution_file(solution_file, solver, status)
+                    if len(parsed) == 4:
+                        lmax, status, gap, _ = parsed
+                    else:
+                        lmax, status, gap = parsed
 
                     if status == "TIMEOUT":
                         elapsed = float(TIMEOUT)

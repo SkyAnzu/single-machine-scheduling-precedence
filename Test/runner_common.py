@@ -18,7 +18,7 @@ from common.project_paths import (
     OUTPUT_DIR,
     configure_runtime_environment,
 )
-from common.schedule_utils import format_solution_text
+from common.schedule_utils import compute_job_lateness, format_solution_text
 
 configure_runtime_environment()
 
@@ -32,12 +32,16 @@ def build_sheet_names(instance_types=None):
     return [dataset_sheet(size, instance_type) for size in DATASET_SIZES for instance_type in selected_types]
 
 
-def filenames_path(size: int) -> Path:
+def filenames_path(size: int, instance_type: str = None) -> Path:
+    if instance_type is not None:
+        type_specific = FILENAMES_DIR / f"{size}-{instance_type}.txt"
+        if type_specific.exists():
+            return type_specific
     return FILENAMES_DIR / f"{size}.txt"
 
 
-def load_filename_list(size: int):
-    filelist = filenames_path(size)
+def load_filename_list(size: int, instance_type: str = None):
+    filelist = filenames_path(size, instance_type)
     if not filelist.exists():
         return None
     return [line.strip() for line in filelist.read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -109,6 +113,14 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
         if verbose:
             print("MIP solver selected: no CNF clause statistics available.")
 
+        if is_sat == "TIME_LIMIT_FEASIBLE":
+            solution_file.write_text(
+                "TIME_LIMIT_FEASIBLE\n"
+                + format_solution_text(schedule, durations, due_dates, lmax, solve_time=solve_time, gap=gap),
+                encoding="utf-8",
+            )
+            return "-", "TIME_LIMIT_FEASIBLE", gap
+
         if not is_sat:
             status_msg = lmax if isinstance(lmax, str) else "UNSAT"
             solution_file.write_text(f"{status_msg}\n", encoding="utf-8")
@@ -178,6 +190,7 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
             str(solution_file),
             valid_starts,
             timeout=timeout,
+            verbose=verbose,
         )
     else:
         incremental_SAT_Lmax(
@@ -189,6 +202,7 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
             upper_bound,
             str(solution_file),
             valid_starts,
+            verbose=verbose,
         )
 
     try:
@@ -239,11 +253,18 @@ def parse_solution_file(solution_file: Path, solver: str, default_status: str):
             return "-", "UNSAT", None, sat_stats
         if first_line == "TIMEOUT":
             return "-", "TIMEOUT", None, sat_stats
+        if first_line == "TIME_LIMIT_FEASIBLE":
+            gap = None
+            for line in lines[1:]:
+                if line.strip().startswith("MIP Gap"):
+                    gap = float(line.split("=", 1)[1].strip().rstrip("%"))
+                    break
+            return "-", "TIME_LIMIT_FEASIBLE", gap, sat_stats
         if first_line == "INFEASIBLE":
             return "-", "INFEASIBLE", None, sat_stats
         if first_line.startswith("STATUS_"):
             return "-", first_line, None, sat_stats
     except Exception:
-        return "-", "ERROR" if default_status == "FINISHED" else default_status, None
+        return "-", "ERROR" if default_status == "FINISHED" else default_status, None, {}
 
-    return "-", "ERROR" if default_status == "FINISHED" else default_status, None
+    return "-", "ERROR" if default_status == "FINISHED" else default_status, None, {}

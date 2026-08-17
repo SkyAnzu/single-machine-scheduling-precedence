@@ -1,11 +1,16 @@
 from collections import deque
 
 
-def window_tightening(job_count, ready_dates, durations, deadlines, successors):
+def build_predecessors(job_count, successors):
     predecessors = {job: [] for job in range(1, job_count + 1)}
     for job in range(1, job_count + 1):
-        for successor in successors[job]:
+        for successor in successors.get(job, []):
             predecessors[successor].append(job)
+    return predecessors
+
+
+def window_tightening(job_count, ready_dates, durations, deadlines, successors):
+    predecessors = build_predecessors(job_count, successors)
 
     indegree = {job: len(predecessors[job]) for job in range(1, job_count + 1)}
     queue = deque(job for job in range(1, job_count + 1) if indegree[job] == 0)
@@ -39,6 +44,65 @@ def window_tightening(job_count, ready_dates, durations, deadlines, successors):
             )
 
     return tightened_ready_dates, tightened_deadlines
+
+
+def bfs_distances(start_job, adjacency):
+    distances = {start_job: 0}
+    queue = deque([start_job])
+
+    while queue:
+        job = queue.popleft()
+        for next_job in adjacency.get(job, []):
+            if next_job not in distances:
+                distances[next_job] = distances[job] + 1
+                queue.append(next_job)
+
+    return distances
+
+
+def source_to_sink_endpoint_edges(job_count, successors):
+    predecessors = build_predecessors(job_count, successors)
+    sources = [job for job in range(1, job_count + 1) if not predecessors[job]]
+    sinks = [job for job in range(1, job_count + 1) if not successors.get(job, [])]
+    extra_edges = set()
+
+    for source in sources:
+        distances = bfs_distances(source, successors)
+        for sink in sinks:
+            if distances.get(sink, -1) >= 2 and sink not in successors.get(source, []):
+                extra_edges.add((source, sink))
+
+    return extra_edges
+
+
+def all_ancestors_to_sink_endpoint_edges(job_count, successors):
+    predecessors = build_predecessors(job_count, successors)
+    sinks = [job for job in range(1, job_count + 1) if not successors.get(job, [])]
+    extra_edges = set()
+
+    for sink in sinks:
+        distances = bfs_distances(sink, predecessors)
+        for ancestor, distance in distances.items():
+            if distance >= 2 and sink not in successors.get(ancestor, []):
+                extra_edges.add((ancestor, sink))
+
+    return extra_edges
+
+
+def extend_successors(job_count, successors, extra_edges):
+    extended_successors = {
+        job: list(successors.get(job, []))
+        for job in range(1, job_count + 1)
+    }
+
+    for start_job, end_job in sorted(extra_edges):
+        if end_job not in extended_successors[start_job]:
+            extended_successors[start_job].append(end_job)
+
+    for job in range(1, job_count + 1):
+        extended_successors[job].sort()
+
+    return extended_successors
 
 
 def compute_max_lateness(schedule, durations, due_dates, clamp_zero=False):

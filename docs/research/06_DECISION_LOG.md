@@ -174,3 +174,63 @@ Use this file to record protocol-affecting decisions, documentation realignments
 - Follow-up actions:
   - Re-run objective comparisons under the aligned code state before making solver-performance claims.
   - Label or archive old workbooks if they are kept for historical diagnostics.
+
+---
+
+## 2026-08-17 | D-006
+- Context:
+  - User requested three additional cross-paradigm baselines: OR-Tools CP-SAT, IBM CPLEX CP Optimizer, and IBM CPLEX MP/MIP.
+  - The local machine does not currently have an IBM CPLEX academic/commercial license configured.
+- Decision:
+  - Add solver entries `cpsat`, `cplex_cp`, and `cplex_mp` to the default 2016 runner infrastructure.
+  - Treat these as direct optimization solvers, not SAT encoding variants.
+  - Keep true `Lmax = max(C_j - d_j)` semantics for all three new modules.
+  - Return explicit missing-runtime/status values for CPLEX modules when DOcplex/CPLEX is unavailable, instead of silently failing batch runs.
+- Rationale:
+  - CP-SAT is license-free and can be run immediately once `ortools` is installed.
+  - CPLEX CP/MP code can be maintained in the repository now, while benchmark claims are deferred until a valid CPLEX runtime/license is available.
+  - Cross-paradigm comparisons require the same filelists, preprocessing, timeout profile, and objective semantics.
+- Evidence:
+  - Added direct optimization solver modules under `Encoding/`.
+  - Registered the new solvers in `common/project_paths.py` and `Test/runner_common.py`.
+  - Added Python dependencies for OR-Tools and DOcplex/CPLEX community runtime in `requirements.txt`.
+- Impacted files/process:
+  - Added: `Encoding/functions_cpsat.py`
+  - Added: `Encoding/functions_cplex_cp.py`
+  - Added: `Encoding/functions_cplex_mp.py`
+  - Updated: `common/project_paths.py`
+  - Updated: `Test/runner_common.py`
+  - Updated: `requirements.txt`
+  - Updated: `docs/research/06_DECISION_LOG.md`
+- Risk:
+  - Medium. CPLEX Community Edition is size-limited and may not solve benchmark instances beyond the free limits.
+  - Medium. CPLEX CP/MP result workbooks should not be used for performance claims until runtime/license availability is verified and status consistency is checked.
+- Follow-up actions:
+  - Install dependencies and run smoke tests on one small 2016 instance.
+  - Record CPLEX license/runtime details in reports before including CPLEX CP/MP results.
+  - Compare `cpsat` first against `seqcardenc_ver5` and `gurobi` under the same 300s default timeout.
+
+---
+
+## 2026-08-18 | D-007
+- Context:
+  - Direct optimization solvers (`cpsat`, `cplex_cp`, `cplex_mp`, and existing `gurobi`) may hit the time limit with a feasible incumbent whose global optimality is unproven (MIP gap > 0 or CP search stopped on a feasible solution).
+  - The runner previously recorded these cases as a distinct `TIME_LIMIT_FEASIBLE` status with `Lmax = "-"`, while historical workbooks (`2016/results.xlsx`) record timeout rows with the best found value.
+- Decision:
+  - Normalize reporting so that a time-limit-feasible result is recorded with status `TIMEOUT` while still logging the best found `Lmax` value (and MIP gap when available).
+  - The solution file itself keeps its structure: first line `TIME_LIMIT_FEASIBLE`, followed by `Lmax = ...`, optional `MIP Gap`, optional `Solve Time`, and the `Schedule:` block.
+  - `Test/rewrite_existing_solutions.py` treats `TIME_LIMIT_FEASIBLE` as a terminal status so rewrites never strip the prefix.
+- Rationale:
+  - A time-limit incumbent is useful evidence (valid upper bound) but not a proven optimum; reporting it as `Lmax = "-"` under a separate status conflates parsing behavior with evidence value.
+  - Aligns with the existing workbook convention that timeout rows still carry the best found value.
+- Evidence:
+  - `Test/runner_common.py`: `run_single_instance` returns `(lmax, "TIMEOUT", gap)`; `parse_solution_file` reads `Lmax` from `TIME_LIMIT_FEASIBLE` files and returns status `TIMEOUT`.
+  - `Test/rewrite_existing_solutions.py`: `TERMINAL_STATUSES` extended with `TIME_LIMIT_FEASIBLE`.
+- Impacted files/process:
+  - Updated: `Test/runner_common.py`
+  - Updated: `Test/rewrite_existing_solutions.py`
+  - Updated: `docs/research/06_DECISION_LOG.md`
+- Risk:
+  - Low. Status string in new workbooks becomes `TIMEOUT` for time-limit feasible runs; consumers must not infer "no solution" from status alone when `Lmax` is present.
+- Follow-up actions:
+  - Verify on `2016/Ins/wtrd_pred50/S/50_05_005_100_75_1.GSP` that all four solvers report consistent `Lmax` where a proven optimum exists, and that a time-limited incumbent reports `TIMEOUT` with its `Lmax` value.

@@ -7,6 +7,7 @@ __pycache__/
 gurobi.lic
 *.pdf
 *.png
+*.GSP.txt
 nul
 rewrite_existing_solutions.py
 AIREADME.md

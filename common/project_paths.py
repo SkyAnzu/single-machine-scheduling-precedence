@@ -15,7 +15,28 @@ LICENSE_FILE = PROJECT_ROOT / "gurobi.lic"
 
 DATASET_SIZES = [10, 20, 30, 40, 50]
 INSTANCE_TYPES = ["S", "L"]
-AVAILABLE_SOLVERS = ["seqcounter", "seqcardenc", "seqcardenc_ver2", "seqcardenc_ver3", "basicsat", "pbenc", "gurobi"]
+AVAILABLE_SOLVERS = [
+    "seqcounter",
+    "seqcardenc",
+    "seqcardenc_ver2",
+    "seqcardenc_ver2e",
+    "seqcardenc_ver3",
+    "seqcardenc_ver5",
+    "seqcardenc_ver5_cadical300",
+    "seqcardenc_ver5e",
+    "seqcardenc_ver5e_cadical300",
+    "seqcardenc_ver5e_1",
+    "seqcardenc_ver5e_1_cadical300",
+    "seqcardenc_ver4_1",
+    "seqcardenc_ver4_2",
+    "seqcardenc_ver4_3",
+    "basicsat",
+    "pbenc",
+    "gurobi",
+    "cpsat",
+    "cplex_cp",
+    "cplex_mp",
+]
 DEFAULT_SOLVERS = ["seqcounter", "gurobi"]
 
 

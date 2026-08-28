@@ -3,6 +3,7 @@ Solve the Single Machine Scheduling Problem with Precedence Constraints using
 Gurobi MIP with a time-indexed formulation.
 """
 
+import math
 import os
 from pathlib import Path
 import sys
@@ -13,12 +14,32 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from common.dataset import read_dataset
-from common.schedule_utils import window_tightening
+from common.schedule_utils import compute_max_lateness, window_tightening
 
 
 _license_file = PROJECT_ROOT / "gurobi.lic"
 if _license_file.exists():
     os.environ["GRB_LICENSE_FILE"] = str(_license_file)
+
+
+def _true_lmax(schedule, durations, due_dates):
+    return compute_max_lateness(schedule, durations, due_dates, clamp_zero=False)
+
+
+def _true_gap_percent(model, incumbent_lmax):
+    """Compute a gap against the extracted schedule objective when possible."""
+    try:
+        objective_bound = float(model.ObjBound)
+    except (AttributeError, TypeError, ValueError):
+        return None
+
+    if not math.isfinite(objective_bound):
+        return None
+
+    numerator = max(0.0, float(incumbent_lmax) - objective_bound)
+    denominator = max(1.0, abs(float(incumbent_lmax)))
+    return numerator / denominator * 100.0
+
 
 def solve_with_gurobi2(n, durations, ready_dates, due_dates, deadlines, successors, time_limit=300):
     try:
@@ -91,14 +112,15 @@ def solve_with_gurobi2(n, durations, ready_dates, due_dates, deadlines, successo
         solve_time = model.Runtime
         if model.status == GRB.OPTIMAL:
             schedule = _extract_schedule(valid_starts, x)
-            return schedule, int(round(lmax.X)), True, solve_time, 0.0
+            objective = _true_lmax(schedule, durations, due_dates)
+            return schedule, objective, True, solve_time, 0.0
 
         if model.status == GRB.TIME_LIMIT:
             if model.SolCount > 0:
                 schedule = _extract_schedule(valid_starts, x)
-                objective = int(round(lmax.X))
-                gap = float(model.MIPGap) * 100
-                if gap <= 0:
+                objective = _true_lmax(schedule, durations, due_dates)
+                gap = _true_gap_percent(model, objective)
+                if gap is not None and gap <= 0:
                     return schedule, objective, True, solve_time, 0.0
                 return schedule, objective, "TIME_LIMIT_FEASIBLE", solve_time, gap
             return None, "TIMEOUT", False, solve_time, None

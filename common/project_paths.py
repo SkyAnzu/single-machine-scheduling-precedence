@@ -31,11 +31,15 @@ AVAILABLE_SOLVERS = [
     "seqcardenc_ver4_2",
     "seqcardenc_ver4_3",
     "basicsat",
+    "directsat",
+    "lampham",
     "pbenc",
     "gurobi",
+    "gurobi2",
     "cpsat",
     "cplex_cp",
     "cplex_mp",
+    "cplexmp2",
 ]
 DEFAULT_SOLVERS = ["seqcounter", "gurobi"]
 

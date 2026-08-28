@@ -52,12 +52,11 @@ def _append_simplified_clause(cnf, base_literals, optional_literals):
     return True
 
 
-def solve_SAT(n, durations, ready_dates, deadlines, successors, verbose=False, sat_solver_name="g421"):
+def _build_hard_cnf(n, durations, ready_dates, deadlines, successors, verbose=False, contradiction_on_impossible=False):
+    """Build the hard CNF using the same encoding path used by the solver."""
     jobs = list(range(1, n + 1))
-
     cnf = CNF()
     var_counter = 1
-
     S = {}
     L = {}
     valid_starts = {}
@@ -67,6 +66,9 @@ def solve_SAT(n, durations, ready_dates, deadlines, successors, verbose=False, s
         if last_start < ready_dates[i]:
             if verbose:
                 print(f"Job {i} impossible: last_start < ready ({last_start} < {ready_dates[i]})")
+            if contradiction_on_impossible:
+                valid_starts[i] = []
+                continue
             return None, None, None, None, None, False
 
         valid_starts[i] = list(range(ready_dates[i], last_start + 1))
@@ -79,13 +81,17 @@ def solve_SAT(n, durations, ready_dates, deadlines, successors, verbose=False, s
 
     l_count = 0
     l_clauses = 0
+
     for j in jobs:
         times = valid_starts[j]
         if not times:
+            if contradiction_on_impossible:
+                cnf.append([])
+                l_clauses += 1
             continue
+
         t_min = times[0]
         t_max = times[-1]
-
         for t in range(t_min, t_max + 1):
             L[(j, t)] = var_counter
             var_counter += 1
@@ -110,8 +116,11 @@ def solve_SAT(n, durations, ready_dates, deadlines, successors, verbose=False, s
         print("L clauses:", l_clauses)
 
     no_overlap_clauses = 0
+
     for i_index, i in enumerate(jobs):
-        for j in jobs[i_index + 1:]:
+        for j in jobs[i_index + 1 :]:
+            if not valid_starts[i] or not valid_starts[j]:
+                continue
             for t_i in valid_starts[i]:
                 left = _l_at_most(L, j, t_i - durations[j], valid_starts)
                 right = _not_l_at_most(L, j, t_i + durations[i] - 1, valid_starts)
@@ -124,6 +133,7 @@ def solve_SAT(n, durations, ready_dates, deadlines, successors, verbose=False, s
                     no_overlap_clauses += 1
 
     prec_clauses = 0
+
     for i in jobs:
         for j in successors.get(i, []):
             if not valid_starts[i] or not valid_starts[j]:
@@ -138,12 +148,8 @@ def solve_SAT(n, durations, ready_dates, deadlines, successors, verbose=False, s
                 cnf.append([-S[(i, t_i)], -L[(j, finish)]])
                 prec_clauses += 1
 
-    if verbose:
-        print("Precedence clauses:", prec_clauses)
-
-    source_ready_anchor_jobs = layer_one_jobs(n, successors)
     source_ready_anchor_clause = []
-    for job in source_ready_anchor_jobs:
+    for job in layer_one_jobs(n, successors):
         ready_time = ready_dates[job]
         if (job, ready_time) in S:
             source_ready_anchor_clause.append(S[(job, ready_time)])
@@ -151,13 +157,47 @@ def solve_SAT(n, durations, ready_dates, deadlines, successors, verbose=False, s
         cnf.append(source_ready_anchor_clause)
 
     if verbose:
+        print("Precedence clauses:", prec_clauses)
         print("Pairwise no-overlap clauses:", no_overlap_clauses)
-        print("Source-ready anchor jobs:", source_ready_anchor_jobs)
+        print("Source-ready anchor jobs:", layer_one_jobs(n, successors))
         print("Source-ready anchor literals:", len(source_ready_anchor_clause))
         print("Total clauses:", len(cnf.clauses))
         print("Total variables:", var_counter - 1)
         primary_vars = list(S.values()) + list(L.values())
         assert len(primary_vars) == len(set(primary_vars)), "Duplicate primary SAT variable IDs detected"
+
+    build_stats = {
+        "total_variables": var_counter - 1,
+        "total_clauses": len(cnf.clauses),
+    }
+
+    return cnf, valid_starts, S, L, build_stats, True
+
+
+def count_hard_cnf(n, durations, ready_dates, deadlines, successors):
+    """Count hard-constraint CNF variables and clauses without solving."""
+    cnf, _, _, _, build_stats, _ = _build_hard_cnf(
+        n,
+        durations,
+        ready_dates,
+        deadlines,
+        successors,
+        contradiction_on_impossible=True,
+    )
+    return build_stats["total_variables"], build_stats["total_clauses"]
+
+
+def solve_SAT(n, durations, ready_dates, deadlines, successors, verbose=False, sat_solver_name="g421"):
+    cnf, valid_starts, S, L, _, build_status = _build_hard_cnf(
+        n,
+        durations,
+        ready_dates,
+        deadlines,
+        successors,
+        verbose=verbose,
+    )
+    if not build_status:
+        return None, None, None, None, None, False
 
     print("\n=== SOLVING (HARD CONSTRAINTS ONLY) ===")
     if verbose:

@@ -6,6 +6,7 @@ This module can be imported without a working CP Optimizer installation. Runtime
 or license failures are returned as explicit statuses for experiment logs.
 """
 
+import os
 from pathlib import Path
 import sys
 
@@ -51,7 +52,11 @@ def solve_with_cplex_cp(n, durations, ready_dates, due_dates, deadlines, success
         lateness_terms = [end_of(intervals[job]) - due_dates[job] for job in jobs]
         model.add(minimize(cp_max(lateness_terms)))
 
-        result = model.solve(TimeLimit=time_limit, LogVerbosity="Quiet")
+        result = model.solve(
+            TimeLimit=time_limit,
+            Workers=max(1, (os.cpu_count() or 2) // 2),
+            LogVerbosity="Quiet",
+        )
         solve_time = float(result.get_solve_time() or 0)
         status_name = str(result.get_solve_status())
 

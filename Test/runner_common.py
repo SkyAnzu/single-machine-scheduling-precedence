@@ -1,5 +1,6 @@
 import sys
 import re
+import time
 from pathlib import Path
 
 try:
@@ -26,7 +27,7 @@ from common.schedule_utils import compute_job_lateness, format_solution_text
 configure_runtime_environment()
 
 
-DIRECT_OPTIMIZATION_SOLVERS = {"gurobi", "cpsat", "cplex_cp", "cplex_mp"}
+DIRECT_OPTIMIZATION_SOLVERS = {"gurobi", "gurobi2", "cpsat", "cplex_cp", "cplex_mp", "cplexmp2"}
 
 
 def dataset_sheet(size: int, instance_type: str) -> str:
@@ -117,12 +118,16 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
     if solver in DIRECT_OPTIMIZATION_SOLVERS:
         if solver == "gurobi":
             from functions_gurobi import read_dataset, solve_MIP, window_tightening
+        elif solver == "gurobi2":
+            from functions_gurobi2 import read_dataset, solve_MIP, window_tightening
         elif solver == "cpsat":
             from functions_cpsat import read_dataset, solve_MIP, window_tightening
         elif solver == "cplex_cp":
             from functions_cplex_cp import read_dataset, solve_MIP, window_tightening
-        else:
+        elif solver == "cplex_mp":
             from functions_cplex_mp import read_dataset, solve_MIP, window_tightening
+        else:
+            from functions_cplexmp2 import read_dataset, solve_MIP, window_tightening
 
         n, durations, ready_dates, due_dates, deadlines, successors = read_dataset(instance_file)
         new_ready_dates, new_deadlines = window_tightening(n, ready_dates, durations, deadlines, successors)
@@ -164,6 +169,10 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
         from functions_pbenc import compute_UB_Lmax, incremental_SAT_Lmax, read_dataset, solve_SAT, window_tightening
     elif solver == "basicsat":
         from functions_basicsat import compute_UB_Lmax, incremental_SAT_Lmax, read_dataset, solve_SAT, window_tightening
+    elif solver == "directsat":
+        from functions_directsat import compute_UB_Lmax, incremental_SAT_Lmax, read_dataset, solve_SAT, window_tightening
+    elif solver == "lampham":
+        from functions_lampham import compute_UB_Lmax, incremental_SAT_Lmax, read_dataset, solve_SAT, window_tightening
     elif solver == "seqcardenc":
         from functions_seqcardenc import compute_UB_Lmax, incremental_SAT_Lmax, read_dataset, solve_SAT, window_tightening
     elif solver == "seqcardenc_ver2":
@@ -202,10 +211,37 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
     else:
         from functions_seqcounter import compute_UB_Lmax, incremental_SAT_Lmax, read_dataset, solve_SAT, window_tightening
 
+    sat_started_at = time.time() if solver in {"directsat", "lampham"} else None
+
     n, durations, ready_dates, due_dates, deadlines, successors = read_dataset(instance_file)
     new_ready_dates, new_deadlines = window_tightening(n, ready_dates, durations, deadlines, successors)
 
-    if solver == "basicsat":
+    if solver == "directsat":
+        initial_timeout = max(0, timeout - (time.time() - sat_started_at))
+        cnf, schedule, valid_starts, s_vars, initial_lmax, is_sat, timeout_stats = solve_SAT(
+            n,
+            durations,
+            new_ready_dates,
+            due_dates,
+            new_deadlines,
+            successors,
+            verbose=verbose,
+            sat_solver_name=sat_solver_name,
+            timeout=initial_timeout,
+        )
+    elif solver == "lampham":
+        initial_timeout = max(0, timeout - (time.time() - sat_started_at))
+        cnf, schedule, valid_starts, s_vars, l_vars, is_sat = solve_SAT(
+            n,
+            durations,
+            new_ready_dates,
+            new_deadlines,
+            successors,
+            verbose=verbose,
+            sat_solver_name=sat_solver_name,
+            timeout=initial_timeout,
+        )
+    elif solver == "basicsat":
         cnf, schedule, valid_starts, s_vars, initial_lmax, is_sat = solve_SAT(
             n,
             durations,
@@ -235,6 +271,22 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
             verbose=verbose,
         )
 
+    if solver == "directsat" and is_sat == "TIMEOUT":
+        timeout_text = "TIMEOUT\n"
+        if verbose and timeout_stats:
+            timeout_text += (
+                f"STATS conflicts={timeout_stats.get('conflicts', 0)} "
+                f"decisions={timeout_stats.get('decisions', 0)} "
+                f"propagations={timeout_stats.get('propagations', 0)} "
+                f"restarts={timeout_stats.get('restarts', 0)}\n"
+            )
+        solution_file.write_text(timeout_text, encoding="utf-8")
+        return "-", "TIMEOUT", None
+
+    if solver == "lampham" and is_sat == "TIMEOUT":
+        solution_file.write_text("TIMEOUT\n", encoding="utf-8")
+        return "-", "TIMEOUT", None
+
     if not is_sat:
         solution_file.write_text("UNSAT\n", encoding="utf-8")
         return "-", "UNSAT", None
@@ -245,7 +297,102 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
         encoding="utf-8",
     )
 
-    if solver == "basicsat":
+    if solver == "directsat":
+        elapsed_before_incremental = time.time() - sat_started_at
+        remaining_timeout = max(0, timeout - elapsed_before_incremental)
+        if remaining_timeout <= 0:
+            solution_file.write_text(
+                "TIMEOUT\n"
+                + format_solution_text(
+                    schedule,
+                    durations,
+                    due_dates,
+                    upper_bound,
+                ),
+                encoding="utf-8",
+            )
+            return upper_bound, "TIMEOUT", None
+
+        final_lmax, final_schedule, solve_time, timed_out = incremental_SAT_Lmax(
+            durations,
+            due_dates,
+            s_vars,
+            initial_lmax,
+            cnf,
+            upper_bound,
+            str(solution_file),
+            valid_starts,
+            timeout=remaining_timeout,
+            elapsed_offset=elapsed_before_incremental,
+            verbose=verbose,
+            sat_solver_name=sat_solver_name,
+        )
+        if timed_out:
+            schedule_to_write = final_schedule or schedule
+            lmax_to_write = final_lmax if final_schedule else upper_bound
+            stats_lines = []
+            if solution_file.exists():
+                stats_lines = [
+                    line
+                    for line in solution_file.read_text(encoding="utf-8").splitlines()
+                    if line.strip().startswith("STATS")
+                ]
+
+            timeout_text = "TIMEOUT\n" + format_solution_text(
+                schedule_to_write,
+                durations,
+                due_dates,
+                lmax_to_write,
+            )
+            if stats_lines:
+                timeout_text += "".join(f"{line}\n" for line in stats_lines)
+
+            solution_file.write_text(timeout_text, encoding="utf-8")
+            return lmax_to_write, "TIMEOUT", None
+    elif solver == "lampham":
+        elapsed_before_incremental = time.time() - sat_started_at
+        remaining_timeout = max(0, timeout - elapsed_before_incremental)
+        if remaining_timeout <= 0:
+            solution_file.write_text(
+                "TIMEOUT\n" + format_solution_text(schedule, durations, due_dates, upper_bound),
+                encoding="utf-8",
+            )
+            return upper_bound, "TIMEOUT", None
+
+        final_lmax, final_schedule, timed_out = incremental_SAT_Lmax(
+            durations,
+            due_dates,
+            s_vars,
+            l_vars,
+            cnf,
+            upper_bound,
+            str(solution_file),
+            valid_starts,
+            verbose=verbose,
+            sat_solver_name=sat_solver_name,
+            timeout=remaining_timeout,
+        )
+        if timed_out:
+            schedule_to_write = final_schedule or schedule
+            lmax_to_write = final_lmax if final_schedule else upper_bound
+            stats_lines = []
+            if solution_file.exists():
+                stats_lines = [
+                    line
+                    for line in solution_file.read_text(encoding="utf-8").splitlines()
+                    if line.strip().startswith("STATS")
+                ]
+            timeout_text = "TIMEOUT\n" + format_solution_text(
+                schedule_to_write,
+                durations,
+                due_dates,
+                lmax_to_write,
+            )
+            if stats_lines:
+                timeout_text += "".join(f"{line}\n" for line in stats_lines)
+            solution_file.write_text(timeout_text, encoding="utf-8")
+            return lmax_to_write, "TIMEOUT", None
+    elif solver == "basicsat":
         incremental_SAT_Lmax(
             durations,
             due_dates,
@@ -284,14 +431,8 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
             verbose=verbose,
         )
 
-    try:
-        first_line = solution_file.read_text(encoding="utf-8").splitlines()[0]
-        match = re.search(r"Lmax\s*=\s*(-?\d+)", first_line)
-        lmax = int(match.group(1)) if match else upper_bound
-    except Exception:
-        lmax = upper_bound
-
-    return lmax, "FINISHED", None
+    lmax, status, gap, _ = parse_solution_file(solution_file, solver, "FINISHED")
+    return lmax, status, gap
 
 
 def parse_solution_file(solution_file: Path, solver: str, default_status: str):
@@ -326,12 +467,21 @@ def parse_solution_file(solution_file: Path, solver: str, default_status: str):
                 second_line = lines[1].strip()
                 if second_line.startswith("MIP Gap"):
                     gap = float(second_line.split("=", 1)[1].strip().rstrip("%"))
-            return lmax, default_status, gap, sat_stats
+            status = default_status
+            if solver in DIRECT_OPTIMIZATION_SOLVERS and gap is not None and gap > 0:
+                status = "TIMEOUT"
+            return lmax, status, gap, sat_stats
 
         if first_line == "UNSAT":
             return "-", "UNSAT", None, sat_stats
         if first_line == "TIMEOUT":
-            return "-", "TIMEOUT", None, sat_stats
+            lmax = None
+            for line in lines[1:]:
+                stripped = line.strip()
+                lmax_match = re.search(r"Lmax\s*=\s*(-?\d+)", stripped)
+                if lmax_match and lmax is None:
+                    lmax = int(lmax_match.group(1))
+            return "-" if lmax is None else lmax, "TIMEOUT", None, sat_stats
         if first_line == "TIME_LIMIT_FEASIBLE":
             lmax = None
             gap = None

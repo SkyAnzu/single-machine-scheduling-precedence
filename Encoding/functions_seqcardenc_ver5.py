@@ -52,7 +52,16 @@ def _append_simplified_clause(cnf, base_literals, optional_literals):
     return True
 
 
-def _build_hard_cnf(n, durations, ready_dates, deadlines, successors, verbose=False, contradiction_on_impossible=False):
+def _build_hard_cnf(
+    n,
+    durations,
+    ready_dates,
+    deadlines,
+    successors,
+    verbose=False,
+    contradiction_on_impossible=False,
+    include_source_ready_anchor=True,
+):
     """Build the hard CNF using the same encoding path used by the solver."""
     jobs = list(range(1, n + 1))
     cnf = CNF()
@@ -149,12 +158,13 @@ def _build_hard_cnf(n, durations, ready_dates, deadlines, successors, verbose=Fa
                 prec_clauses += 1
 
     source_ready_anchor_clause = []
-    for job in layer_one_jobs(n, successors):
-        ready_time = ready_dates[job]
-        if (job, ready_time) in S:
-            source_ready_anchor_clause.append(S[(job, ready_time)])
-    if source_ready_anchor_clause:
-        cnf.append(source_ready_anchor_clause)
+    if include_source_ready_anchor:
+        for job in layer_one_jobs(n, successors):
+            ready_time = ready_dates[job]
+            if (job, ready_time) in S:
+                source_ready_anchor_clause.append(S[(job, ready_time)])
+        if source_ready_anchor_clause:
+            cnf.append(source_ready_anchor_clause)
 
     if verbose:
         print("Precedence clauses:", prec_clauses)
@@ -174,7 +184,7 @@ def _build_hard_cnf(n, durations, ready_dates, deadlines, successors, verbose=Fa
     return cnf, valid_starts, S, L, build_stats, True
 
 
-def count_hard_cnf(n, durations, ready_dates, deadlines, successors):
+def count_hard_cnf(n, durations, ready_dates, deadlines, successors, include_source_ready_anchor=True):
     """Count hard-constraint CNF variables and clauses without solving."""
     cnf, _, _, _, build_stats, _ = _build_hard_cnf(
         n,
@@ -183,11 +193,21 @@ def count_hard_cnf(n, durations, ready_dates, deadlines, successors):
         deadlines,
         successors,
         contradiction_on_impossible=True,
+        include_source_ready_anchor=include_source_ready_anchor,
     )
     return build_stats["total_variables"], build_stats["total_clauses"]
 
 
-def solve_SAT(n, durations, ready_dates, deadlines, successors, verbose=False, sat_solver_name="g421"):
+def solve_SAT(
+    n,
+    durations,
+    ready_dates,
+    deadlines,
+    successors,
+    verbose=False,
+    sat_solver_name="g421",
+    include_source_ready_anchor=True,
+):
     cnf, valid_starts, S, L, _, build_status = _build_hard_cnf(
         n,
         durations,
@@ -195,6 +215,7 @@ def solve_SAT(n, durations, ready_dates, deadlines, successors, verbose=False, s
         deadlines,
         successors,
         verbose=verbose,
+        include_source_ready_anchor=include_source_ready_anchor,
     )
     if not build_status:
         return None, None, None, None, None, False

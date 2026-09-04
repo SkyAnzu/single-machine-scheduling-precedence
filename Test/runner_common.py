@@ -184,6 +184,13 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
     elif solver == "seqcardenc_ver5":
         from functions_seqcardenc_ver5 import compute_UB_Lmax, incremental_SAT_Lmax, read_dataset, solve_SAT, window_tightening
         supports_backend_override = True
+    elif solver == "seqcardenc_ver5_2":
+        from functions_seqcardenc_ver5_2 import compute_UB_Lmax, incremental_SAT_Lmax, read_dataset, solve_SAT, window_tightening
+    elif solver == "seqcardenc_ver5_nolayer":
+        from functions_seqcardenc_ver5_nolayer import compute_UB_Lmax, incremental_SAT_Lmax, read_dataset, solve_SAT, window_tightening
+        supports_backend_override = True
+    elif solver == "seqcardenc_ver5_2_nolayer":
+        from functions_seqcardenc_ver5_2_nolayer import compute_UB_Lmax, incremental_SAT_Lmax, read_dataset, solve_SAT, window_tightening
     elif solver == "seqcardenc_ver5_cadical300":
         from functions_seqcardenc_ver5 import compute_UB_Lmax, incremental_SAT_Lmax, read_dataset, solve_SAT, window_tightening
         sat_solver_name = "cadical300"
@@ -247,6 +254,15 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
             durations,
             new_ready_dates,
             due_dates,
+            new_deadlines,
+            successors,
+            verbose=verbose,
+        )
+    elif solver in {"seqcardenc_ver5_2", "seqcardenc_ver5_2_nolayer"}:
+        cnf, schedule, valid_starts, s_vars, l_vars, is_sat, live_solver = solve_SAT(
+            n,
+            durations,
+            new_ready_dates,
             new_deadlines,
             successors,
             verbose=verbose,
@@ -403,6 +419,18 @@ def run_single_instance(instance_file: Path, solution_file: Path, solver: str, t
             str(solution_file),
             valid_starts,
             timeout=timeout,
+            verbose=verbose,
+        )
+    elif solver in {"seqcardenc_ver5_2", "seqcardenc_ver5_2_nolayer"}:
+        incremental_SAT_Lmax(
+            durations,
+            due_dates,
+            s_vars,
+            l_vars,
+            live_solver,
+            upper_bound,
+            str(solution_file),
+            valid_starts,
             verbose=verbose,
         )
     elif supports_backend_override:
